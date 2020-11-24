@@ -151,23 +151,56 @@ void func_motion_init(void *param)
     //draw all......
     lv_refr_now(lv_disp_get_default());
 
-    // copy data to app_setting_main
-    rt_memcpy(pdata->fb, g_lvdata->fb, g_lvdata->fblen);
+    struct image_st ps;
 
-    //sunnys
-    rt_uint16_t startx;
-    rt_uint16_t starty;
-    for (i = 0; i < 3; i++)
+    ps.width  = LV_HOR_RES;
+    ps.height = LV_VER_RES;
+    ps.stride = LV_HOR_RES * (LV_COLOR_DEPTH >> 3);
+    ps.pdata = g_lvdata->fb;
+
+    if (param == NULL)
     {
-        startx = MOTION_ICONS_X;
-        starty = 155 + i * 50;
-        img_info = &list_info[i];
-        rt_display_img_fill(img_info, pdata->fb, MOTION_WIN_FB_W, startx, starty);
+        struct image_st pd;
+
+        pd.width  = MOTION_WIN_XRES;
+        pd.height = MOTION_WIN_YRES;
+        pd.stride = MOTION_WIN_XRES * (MOTION_WIN_COLOR_DEPTH >> 3);
+        pd.pdata = pdata->fb;
+
+        rk_image_copy(&ps, &pd, LV_COLOR_DEPTH >> 3);
+
+        rt_uint16_t startx;
+        rt_uint16_t starty;
+        for (i = 0; i < 3; i++)
+        {
+            startx = MOTION_ICONS_X;
+            starty = 155 + i * 50;
+            img_info = &list_info[i];
+            rt_display_img_fill(img_info, pdata->fb, MOTION_WIN_FB_W, startx, starty);
+        }
+    }
+    else
+    {
+        struct image_st *pd = (struct image_st *)param;
+
+        rk_image_copy(&ps, pd, LV_COLOR_DEPTH >> 3);
+
+        pd->pdata += (MOTION_ICONS_X * (MOTION_WIN_COLOR_DEPTH >> 3) + 155 * pd->stride);
+        for (i = 0; i < 3; i++)
+        {
+            img_info = &list_info[i];
+            ps.width  = img_info->w;
+            ps.height = img_info->h;
+            ps.stride = img_info->size / img_info->h;
+            ps.pdata = img_info->data;
+
+            rk_image_copy(&ps, pd, LV_COLOR_DEPTH >> 3);
+            pd->pdata += 50 * pd->stride;
+        }
     }
 
     lv_obj_del(obj_main);
 
-    // copy data to app_setting_main
     app_func_set_preview(APP_FUNC_EXERCISE, pdata->fb);
 }
 
