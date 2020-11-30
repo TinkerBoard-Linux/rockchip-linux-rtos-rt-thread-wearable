@@ -103,8 +103,10 @@ int image_dec_test(int argc, char *argv[])
         return -1;
     }
 
+#if APP_WDT_ENABLE
     if (pdata->wdt_dev)
         rt_device_control(pdata->wdt_dev, RT_DEVICE_CTRL_WDT_STOP, &type);
+#endif
     level = rt_hw_interrupt_disable();
     if (dir_path != NULL)
     {
@@ -190,8 +192,10 @@ int image_dec_test(int argc, char *argv[])
     }
 EXIT:
     rt_hw_interrupt_enable(level);
+#if APP_WDT_ENABLE
     if (pdata->wdt_dev)
         rt_device_control(pdata->wdt_dev, RT_DEVICE_CTRL_WDT_START, &type);
+#endif
 
     heap_free(fb);
 

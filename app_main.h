@@ -75,8 +75,9 @@
 #define APP_WDT_TIMEOUT             300     // ms
 #define APP_TIMING_LIGHTOFF_MIN     5       // s
 #define APP_TIMING_LIGHTOFF         30      // s
-#define APP_SUSPEND_RESUME_ENABLE   1
+#define APP_SUSPEND_RESUME_ENABLE   0
 #define APP_SUSPEND_TIMEOUT         1000    // ms
+#define APP_WDT_ENABLE              1
 
 enum app_smooth_id
 {
@@ -92,6 +93,13 @@ enum app_play_mode
     APP_PLAY_LIST = 1,
     APP_PLAY_LOOP,
     APP_PLAY_RANDOM,
+};
+
+enum app_pm_status
+{
+    APP_PM_NONE,
+    APP_PM_SUSPEND,
+    APP_PM_RESUME,
 };
 
 /*
@@ -191,6 +199,7 @@ struct app_main_data_t
     uint8_t           bl;
     uint8_t           bl_en;
     uint8_t           bl_time;
+    uint8_t           pm_status;
 
     rt_timer_t        clk_timer;
 #if APP_TIMING_LIGHTOFF
@@ -232,7 +241,9 @@ struct app_main_data_t
 
     rt_err_t (*tp_move_up)(void *param);
     rt_err_t (*tp_touch_up)(void *param);
+#if APP_WDT_ENABLE
     rt_device_t wdt_dev;
+#endif
 
     player_state_t play_state;
     rt_int8_t play_mode;

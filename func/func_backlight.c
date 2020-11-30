@@ -153,6 +153,7 @@ static rt_err_t lv_touch_cb(struct rt_touch_data *point, rt_uint8_t num)
 
     if (touch_func_sel != 0)
     {
+        app_main_keep_screen_on();
         if (b->event == RT_TOUCH_EVENT_DOWN)
         {
             littlevgl2rtt_send_input_event(p->x_coordinate - b->x, p->y_coordinate - b->y, LITTLEVGL2RTT_INPUT_DOWN);

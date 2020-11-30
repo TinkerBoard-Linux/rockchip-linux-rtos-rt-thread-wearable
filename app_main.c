@@ -174,7 +174,9 @@ static void app_main_timer_tick(void *parameter)
     struct app_main_data_t *pdata = (struct app_main_data_t *)parameter;
     clock_time_t *time = &pdata->tmr_data;
 
+#if APP_WDT_ENABLE
     dw_wdt_set_top(APP_WDT_TIMEOUT);
+#endif
     if (g_timer_cb.timeout)
     {
         g_timer_cb.timeout--;
@@ -231,7 +233,7 @@ static void app_main_timer_tick(void *parameter)
         }
     }
 
-    if (pdata->timer_cb)
+    if (pdata->timer_cb && pdata->bl_en)
     {
         pdata->timer_cb();
     }
@@ -359,16 +361,22 @@ rt_err_t app_main_touch_process(struct rt_touch_data *point, rt_uint8_t num)
 
     if (app_main_data->bl_en == 0)
     {
-        clock_app_mq_t mq = {MQ_BACKLIGHT_SWITCH, NULL};
-        rt_err_t ret = rt_mq_send(app_main_data->mq, &mq, sizeof(clock_app_mq_t));
-        RT_ASSERT(ret != RT_ERROR);
+#ifndef POWER_KEY_BANK_PIN
+        clock_app_mq_t mq;
+        mq.cmd = MQ_BACKLIGHT_SWITCH;
+        mq.param = (void *)(uint32_t)app_main_data->bl;
+        rt_mq_send(app_main_data->mq, &mq, sizeof(clock_app_mq_t));
         wait_event = RT_TOUCH_EVENT_UP;
+#endif
         return RT_EOK;
     }
     app_main_keep_screen_on();
-    if (wait_event && b->event != wait_event)
+    if (wait_event)
+    {
+        if (b->event == wait_event)
+            wait_event = RT_TOUCH_EVENT_NONE;
         return RT_EOK;
-    wait_event = RT_TOUCH_EVENT_NONE;
+    }
 
     switch (b->event)
     {
@@ -805,22 +813,41 @@ void app_play_cb(void)
  * clock demo thread
  */
 
+void app_wake_up(void)
+{
+#if APP_SUSPEND_RESUME_ENABLE
+    if (app_main_data->pm_status == APP_PM_SUSPEND)
+    {
+        rt_pm_request(1);
+        app_main_data->pm_status = APP_PM_RESUME;
+#if APP_WDT_ENABLE
+        dw_wdt_set_top(APP_WDT_TIMEOUT);
+#endif
+        rk_imagelib_init();
+        rt_pin_write(TOUCH_RST_PIN, PIN_HIGH);
+    }
+#endif
+    clock_app_mq_t mq;
+    mq.cmd = MQ_BACKLIGHT_SWITCH;
+    mq.param = (void *)(uint32_t)app_main_data->bl;
+    rt_err_t ret = rt_mq_send(app_main_data->mq, &mq, sizeof(clock_app_mq_t));
+    RT_ASSERT(ret != RT_ERROR);
+}
+
 #ifdef RT_USING_BMI270
 extern rt_err_t bmi270_isr_sethook(void (*hook)(void));
 void app_bmi_isr(void)
 {
     if (app_main_data->bl_en == 0)
     {
-        clock_app_mq_t mq = {MQ_BACKLIGHT_SWITCH, NULL};
-        rt_err_t ret = rt_mq_send(app_main_data->mq, &mq, sizeof(clock_app_mq_t));
-        RT_ASSERT(ret != RT_ERROR);
+        app_wake_up();
     }
 }
 #endif
 
-static void app_main_switch_panel(void)
+static void app_main_switch_panel(void *param)
 {
-    uint16_t bl;
+    uint16_t bl = (uint16_t)(uint32_t)param;
     rt_err_t ret;
 
     if (app_main_data->bl_en == 0)
@@ -830,35 +857,65 @@ static void app_main_switch_panel(void)
 
     ret = rt_display_backlight_set(bl);
     if (ret == RT_EOK)
+    {
         app_main_data->bl_en = (bl > 0) ? 1 : 0;
 #if APP_TIMING_LIGHTOFF
-    if (app_main_data->bl_en == 1)
-        rt_timer_start(app_main_data->bl_timer);
+        if (app_main_data->bl_time)
+        {
+            if (app_main_data->bl_en == 1)
+                rt_timer_start(app_main_data->bl_timer);
+            else
+                rt_timer_stop(app_main_data->bl_timer);
+        }
 #endif
+    }
 }
-MSH_CMD_EXPORT_ALIAS(app_main_switch_panel, switch, switch panel brightness);
 
+void app_bl_switch(void)
+{
+    clock_app_mq_t mq;
+    mq.cmd = MQ_BACKLIGHT_SWITCH;
+    mq.param = (void *)(app_main_data->bl_en == 1 ? 0 : app_main_data->bl);
+    rt_err_t ret = rt_mq_send(app_main_data->mq, &mq, sizeof(clock_app_mq_t));
+    RT_ASSERT(ret != RT_ERROR);
+}
+MSH_CMD_EXPORT_ALIAS(app_bl_switch, switch, switch panel backlight);
+
+#ifdef POWER_KEY_PIN
 rt_err_t app_reboot_loader(void *param)
 {
-    BSP_SetLoaderFlag();
-    rt_hw_cpu_reset();
+    if (rt_pin_read(POWER_KEY_BANK_PIN) == PIN_HIGH)
+    {
+        BSP_SetLoaderFlag();
+        rt_hw_cpu_reset();
+    }
 
     return RT_EOK;
 }
 
-#ifdef POWER_KEY_PIN
+static uint32_t last_int = 0;
 static void app_gpio_isr(void *arg)
 {
+    if ((HAL_GetTick() - last_int) < 300)
+        return;
+    last_int = HAL_GetTick();
+
     if (rt_pin_read(POWER_KEY_BANK_PIN) == PIN_HIGH)
     {
-        clock_app_mq_t mq = {MQ_BACKLIGHT_SWITCH, NULL};
-        rt_err_t ret = rt_mq_send(app_main_data->mq, &mq, sizeof(clock_app_mq_t));
-        RT_ASSERT(ret != RT_ERROR);
-        app_main_register_timeout_cb(app_reboot_loader, NULL, 5000);
+        if (app_main_data->bl_en == 0)
+        {
+            app_wake_up();
+        }
+        else
+        {
+            app_main_keep_screen_on();
+        }
+        app_main_register_timeout_cb(app_reboot_loader, NULL, 3000);
     }
     else
     {
-        app_main_unregister_timeout_cb_if_is(app_reboot_loader);
+        if (app_main_data->pm_status != APP_PM_SUSPEND)
+            app_main_unregister_timeout_cb_if_is(app_reboot_loader);
     }
 }
 #endif
@@ -868,7 +925,7 @@ static void app_main_backlight_timer(void *arg)
 {
     if (app_main_data->bl_en != 0)
     {
-        clock_app_mq_t mq = {MQ_BACKLIGHT_SWITCH, NULL};
+        clock_app_mq_t mq = {MQ_BACKLIGHT_SWITCH, (void *)0};
         rt_err_t ret = rt_mq_send(app_main_data->mq, &mq, sizeof(clock_app_mq_t));
         RT_ASSERT(ret != RT_ERROR);
     }
@@ -974,11 +1031,13 @@ static void app_main_thread(void *p)
     RT_ASSERT(pdata->bl_timer != RT_NULL);
 #endif
 
+#if APP_WDT_ENABLE
     int type = 1;
     pdata->wdt_dev = rt_device_find("dw_wdt");
     rt_device_init(pdata->wdt_dev);
     dw_wdt_set_top(APP_WDT_TIMEOUT);
     rt_device_control(pdata->wdt_dev, RT_DEVICE_CTRL_WDT_START, &type);
+#endif
     rt_timer_start(pdata->clk_timer);
 #if APP_TIMING_LIGHTOFF
     if (pdata->bl_time)
@@ -1003,24 +1062,50 @@ static void app_main_thread(void *p)
 #endif
     while (1)
     {
+        if (app_main_data->pm_status == APP_PM_SUSPEND)
+        {
+            rt_thread_mdelay(50);
+            continue;
+        }
         ret = rt_mq_recv(pdata->mq, &mq, sizeof(clock_app_mq_t), RT_WAITING_FOREVER);
         RT_ASSERT(ret == RT_EOK);
-
         switch (mq.cmd)
         {
         case MQ_DESIGN_UPDATE:
             app_main_design(pdata, mq.param);
             break;
         case MQ_REFR_UPDATE:
-            if (app_main_data->bl_en != 0)
-                app_main_refresh(pdata, mq.param);
+            app_main_refresh(pdata, mq.param);
             break;
         case MQ_BACKLIGHT_SWITCH:
-            app_main_switch_panel();
+            app_main_switch_panel(mq.param);
+#if APP_SUSPEND_RESUME_ENABLE
+            if (app_main_data->pm_status == APP_PM_RESUME)
+                app_main_data->pm_status = APP_PM_NONE;
+#endif
             break;
         default:
             break;
         }
+
+#if APP_SUSPEND_RESUME_ENABLE
+        if ((app_main_data->bl_en == 0) && (app_main_data->pm_status == APP_PM_NONE))
+        {
+#ifdef POWER_KEY_BANK_PIN
+            while (rt_pin_read(POWER_KEY_BANK_PIN) == PIN_HIGH)
+                rt_thread_mdelay(1);
+#endif
+            rt_pin_write(TOUCH_RST_PIN, PIN_LOW);
+            rt_thread_mdelay(200);
+            rk_imagelib_deinit();
+#if APP_WDT_ENABLE
+            dw_wdt_set_top(APP_WDT_TIMEOUT);
+#endif
+            app_main_data->pm_status = APP_PM_SUSPEND;
+            HAL_DCACHE_CleanInvalidate();
+            rt_pm_release(1);
+        }
+#endif
     }
 
     rt_timer_stop(pdata->clk_timer);
@@ -1051,22 +1136,23 @@ static int app_main_init(void)
 #ifndef RT_USB_DEVICE_MSTORAGE
 INIT_APP_EXPORT(app_main_init);
 #else
+#ifdef POWER_KEY_PIN
 static void app_gpio_isr2(void *arg)
 {
-    app_reboot_loader(arg);
+    BSP_SetLoaderFlag();
+    rt_hw_cpu_reset();
 }
 
 static int power_key_init(void)
 {
-#ifdef POWER_KEY_PIN
     uint32_t pin_info = POWER_KEY_BANK_PIN;
     HAL_GPIO_SetPinsDirection(POWER_KEY_GPIO, POWER_KEY_PIN, GPIO_IN);
     HAL_PINCTRL_SetParam(POWER_KEY_BANK, POWER_KEY_PIN, PIN_CONFIG_PUL_NORMAL);
     rt_pin_attach_irq(pin_info, PIN_IRQ_MODE_RISING_FALLING, app_gpio_isr2, NULL);
     rt_pin_irq_enable(pin_info, PIN_IRQ_ENABLE);
-#endif
 
     return 0;
 }
 INIT_APP_EXPORT(power_key_init);
+#endif
 #endif

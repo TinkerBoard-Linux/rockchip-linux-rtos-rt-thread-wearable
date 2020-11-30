@@ -158,12 +158,6 @@ static main_page_design_param_t weather_design_param;
 static design_cb_t              weather_design = {.cb = app_main_page_weather_design,};
 void app_main_page_weather_update(void)
 {
-    //if (clock_second_bk == app_main_data->tmr_data.second)
-    //{
-    //    return;
-    //}
-    //clock_second_bk = app_main_data->tmr_data.second;
-
     weather_design_param.buf_id = 2;
     app_design_request(0, &weather_design, &weather_design_param);
 }
@@ -178,6 +172,7 @@ void app_main_page_music_update(void)
     {
         return;
     }
+    last_tick = HAL_GetTick();
 
     music_design_param.buf_id = 3;
     app_design_request(0, &music_design, &music_design_param);
