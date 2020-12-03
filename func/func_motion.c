@@ -39,6 +39,9 @@ void func_motion_init(void *param)
     char img_name[64];
     image_info_t *img_info = NULL;
 
+    app_func_refrsh_param.win_id    = APP_CLOCK_WIN_2;
+    app_func_refrsh_param.win_layer = WIN_TOP_LAYER;
+
     pdata->max_w = MOTION_WIN_FB_W;
     pdata->max_h = MOTION_WIN_FB_H;
     pdata->alpha_win = 0;
@@ -133,7 +136,7 @@ void func_motion_init(void *param)
     lv_obj_t *label_0 = lv_label_create(obj_main, NULL);
     lv_obj_add_style(label_0, LV_STATE_DEFAULT, &list_lable);
     lv_obj_set_pos(label_0, MOTION_LABEL_X, 155);
-    lv_label_set_text(label_0, "4558步");
+    lv_label_set_text(label_0, "4558");
 
     lv_obj_t *label_1 = lv_label_create(obj_main, NULL);
     lv_obj_add_style(label_1, LV_STATE_DEFAULT, &list_lable);
@@ -143,7 +146,7 @@ void func_motion_init(void *param)
     lv_obj_t *label_2 = lv_label_create(obj_main, NULL);
     lv_obj_add_style(label_2, LV_STATE_DEFAULT, &list_lable);
     lv_obj_set_pos(label_2, MOTION_LABEL_X, 255);
-    lv_label_set_text(label_2, "9/12次");
+    lv_label_set_text(label_2, "9/12");
 
     //draw all......
     lv_refr_now(lv_disp_get_default());

@@ -327,7 +327,15 @@ rt_err_t app_main_touch_smooth_design(void *param)
     return RT_EOK;
 }
 
-static rt_err_t app_main_touch_process(struct rt_touch_data *point, rt_uint8_t num)
+void app_main_keep_screen_on(void)
+{
+#if APP_TIMING_LIGHTOFF
+    if (app_main_data->bl_time)
+        rt_timer_start(app_main_data->bl_timer);
+#endif
+}
+
+rt_err_t app_main_touch_process(struct rt_touch_data *point, rt_uint8_t num)
 {
     struct app_main_data_t *pdata = app_main_data;
     struct rt_touch_data *p       = &point[0];
@@ -349,10 +357,7 @@ static rt_err_t app_main_touch_process(struct rt_touch_data *point, rt_uint8_t n
     p->x_coordinate -= b->x;
     p->y_coordinate -= b->y;
 
-#if APP_TIMING_LIGHTOFF
-    rt_timer_start(app_main_data->bl_timer);
-#endif
-    if (app_main_data->bl == 0)
+    if (app_main_data->bl_en == 0)
     {
         clock_app_mq_t mq = {MQ_BACKLIGHT_SWITCH, NULL};
         rt_err_t ret = rt_mq_send(app_main_data->mq, &mq, sizeof(clock_app_mq_t));
@@ -360,6 +365,7 @@ static rt_err_t app_main_touch_process(struct rt_touch_data *point, rt_uint8_t n
         wait_event = RT_TOUCH_EVENT_UP;
         return RT_EOK;
     }
+    app_main_keep_screen_on();
     if (wait_event && b->event != wait_event)
         return RT_EOK;
     wait_event = RT_TOUCH_EVENT_NONE;
@@ -803,7 +809,7 @@ void app_play_cb(void)
 extern rt_err_t bmi270_isr_sethook(void (*hook)(void));
 void app_bmi_isr(void)
 {
-    if (app_main_data->bl == 0)
+    if (app_main_data->bl_en == 0)
     {
         clock_app_mq_t mq = {MQ_BACKLIGHT_SWITCH, NULL};
         rt_err_t ret = rt_mq_send(app_main_data->mq, &mq, sizeof(clock_app_mq_t));
@@ -817,16 +823,16 @@ static void app_main_switch_panel(void)
     uint16_t bl;
     rt_err_t ret;
 
-    if (app_main_data->bl == 0)
-        bl = 50;
+    if (app_main_data->bl_en == 0)
+        bl = app_main_data->bl;
     else
         bl = 0;
 
     ret = rt_display_backlight_set(bl);
     if (ret == RT_EOK)
-        app_main_data->bl = bl;
+        app_main_data->bl_en = (bl > 0) ? 1 : 0;
 #if APP_TIMING_LIGHTOFF
-    if (app_main_data->bl == 50)
+    if (app_main_data->bl_en == 1)
         rt_timer_start(app_main_data->bl_timer);
 #endif
 }
@@ -860,7 +866,7 @@ static void app_gpio_isr(void *arg)
 #if APP_TIMING_LIGHTOFF
 static void app_main_backlight_timer(void *arg)
 {
-    if (app_main_data->bl != 0)
+    if (app_main_data->bl_en != 0)
     {
         clock_app_mq_t mq = {MQ_BACKLIGHT_SWITCH, NULL};
         rt_err_t ret = rt_mq_send(app_main_data->mq, &mq, sizeof(clock_app_mq_t));
@@ -868,6 +874,27 @@ static void app_main_backlight_timer(void *arg)
     }
 }
 #endif
+
+void app_main_set_bl_timeout(uint32_t set_time)
+{
+    app_main_data->bl_time = set_time;
+    save_app_info(app_main_data);
+    if (app_main_data->bl_timer)
+    {
+        if (set_time)
+        {
+            set_time *= RT_TICK_PER_SECOND;
+            rt_timer_control(app_main_data->bl_timer, RT_TIMER_CTRL_SET_TIME, &set_time);
+            rt_timer_control(app_main_data->bl_timer, RT_TIMER_CTRL_GET_TIME, &set_time);
+            rt_timer_start(app_main_data->bl_timer);
+            rt_kprintf("Set bl timeout %dms", set_time);
+        }
+        else
+        {
+            rt_timer_stop(app_main_data->bl_timer);
+        }
+    }
+}
 
 static void app_main_thread(void *p)
 {
@@ -897,6 +924,8 @@ static void app_main_thread(void *p)
     RT_ASSERT(pdata->disp != RT_NULL);
 
     app_main_data->bl = 50;
+    app_main_data->bl_en = 1;
+    app_main_data->bl_time = 5;
 
     struct rt_device_graphic_info *info = &pdata->disp->info;
     if ((info->width < DISP_XRES) || (info->height < DISP_YRES))
@@ -921,13 +950,6 @@ static void app_main_thread(void *p)
                                        APP_TIMER_UPDATE_TICKS, RT_TIMER_FLAG_PERIODIC | RT_TIMER_FLAG_SOFT_TIMER);
     RT_ASSERT(pdata->clk_timer != RT_NULL);
 
-#if APP_TIMING_LIGHTOFF
-    pdata->bl_timer = rt_timer_create("appbl_timer",
-                                      app_main_backlight_timer, (void *)pdata,
-                                      RT_TICK_PER_SECOND * APP_TIMING_LIGHTOFF, RT_TIMER_FLAG_ONE_SHOT | RT_TIMER_FLAG_HARD_TIMER);
-    RT_ASSERT(pdata->bl_timer != RT_NULL);
-#endif
-
     // app init...
     app_lvgl_init(); // last app init
     app_main_page_init(); // First app init
@@ -944,16 +966,23 @@ static void app_main_thread(void *p)
     app_play_set_callback(app_play_cb);
     app_alpha_win_init();
 
-    int type = 0;
+#if APP_TIMING_LIGHTOFF
+    uint32_t bl_time = pdata->bl_time > 0 ? pdata->bl_time : 1;
+    pdata->bl_timer = rt_timer_create("appbl_timer",
+                                      app_main_backlight_timer, (void *)pdata,
+                                      RT_TICK_PER_SECOND * bl_time, RT_TIMER_FLAG_ONE_SHOT | RT_TIMER_FLAG_HARD_TIMER);
+    RT_ASSERT(pdata->bl_timer != RT_NULL);
+#endif
+
+    int type = 1;
     pdata->wdt_dev = rt_device_find("dw_wdt");
     rt_device_init(pdata->wdt_dev);
     dw_wdt_set_top(APP_WDT_TIMEOUT);
-    // rt_device_control(pdata->wdt_dev, RT_DEVICE_CTRL_WDT_SET_TIMEOUT, &top);
-    // rt_device_control(pdata->wdt_dev, RT_DEVICE_CTRL_WDT_KEEPALIVE, NULL);
     rt_device_control(pdata->wdt_dev, RT_DEVICE_CTRL_WDT_START, &type);
     rt_timer_start(pdata->clk_timer);
 #if APP_TIMING_LIGHTOFF
-    rt_timer_start(pdata->bl_timer);
+    if (pdata->bl_time)
+        rt_timer_start(pdata->bl_timer);
 #endif
 
     // touch init...
@@ -983,7 +1012,7 @@ static void app_main_thread(void *p)
             app_main_design(pdata, mq.param);
             break;
         case MQ_REFR_UPDATE:
-            if (app_main_data->bl != 0)
+            if (app_main_data->bl_en != 0)
                 app_main_refresh(pdata, mq.param);
             break;
         case MQ_BACKLIGHT_SWITCH:

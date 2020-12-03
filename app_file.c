@@ -27,6 +27,8 @@ void get_app_info(struct app_main_data_t *info)
 
     info->clock_style = 1;
     info->play_mode = APP_PLAY_LIST;
+    info->bl_time = APP_TIMING_LIGHTOFF;
+    info->bl = 50;
     fd = fopen(APP_INFO_FILE, "rb");
     if (!fd)
     {
@@ -40,6 +42,14 @@ void get_app_info(struct app_main_data_t *info)
 
     if (app_info.play_mode >= APP_PLAY_LIST && app_info.play_mode <= APP_PLAY_RANDOM)
         info->play_mode = app_info.play_mode;
+
+    if (app_info.bl_time >= APP_TIMING_LIGHTOFF_MIN)
+        info->bl_time = app_info.bl_time;
+    else
+        info->bl_time = 0;
+
+    if (app_info.bl >= 20 && app_info.bl <= 100)
+        info->bl = app_info.bl;
 
     fclose(fd);
 }

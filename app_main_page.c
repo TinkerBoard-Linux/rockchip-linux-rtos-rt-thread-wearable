@@ -703,6 +703,7 @@ void app_main_page_init(void)
     /* Make sure the first dta source is loaded after here */
 #endif
     get_app_info(app_main_data);
+    rt_display_backlight_set(app_main_data->bl);
 
     rk_imagelib_init();
     app_main_page_load_default_source();

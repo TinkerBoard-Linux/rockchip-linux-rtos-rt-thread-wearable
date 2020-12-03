@@ -72,8 +72,11 @@
 #define WEATHER_PATH            USERDATA_PATH"weather"
 #define NOTICE_PATH             USERDATA_PATH"notice"
 
-#define APP_WDT_TIMEOUT         300 // ms
-#define APP_TIMING_LIGHTOFF     0   //5 // s
+#define APP_WDT_TIMEOUT             300     // ms
+#define APP_TIMING_LIGHTOFF_MIN     5       // s
+#define APP_TIMING_LIGHTOFF         30      // s
+#define APP_SUSPEND_RESUME_ENABLE   1
+#define APP_SUSPEND_TIMEOUT         1000    // ms
 
 enum app_smooth_id
 {
@@ -185,7 +188,9 @@ struct app_main_data_t
     rt_display_data_t disp;
     rt_event_t        event;
     rt_mq_t           mq;
-    uint16_t          bl;
+    uint8_t           bl;
+    uint8_t           bl_en;
+    uint8_t           bl_time;
 
     rt_timer_t        clk_timer;
 #if APP_TIMING_LIGHTOFF
@@ -304,6 +309,9 @@ void app_main_unregister_timeout_cb(void);
 void app_main_unregister_timeout_cb_if_is(rt_err_t (*cb)(void *param));
 void app_registe_refresh_done_cb(rt_err_t (*cb)(void *param), void *param);
 rt_err_t app_main_touch_smooth_design(void *param);
+rt_err_t app_main_touch_process(struct rt_touch_data *point, rt_uint8_t num);
+void app_main_keep_screen_on(void);
+void app_main_set_bl_timeout(uint32_t set_time);
 
 /**********************
  * SUB INCLUDE
@@ -330,5 +338,6 @@ rt_err_t app_main_touch_smooth_design(void *param);
 #include "func_heartrate.h"
 #include "func_setting.h"
 #include "func_motion.h"
+#include "func_backlight.h"
 
 #endif
