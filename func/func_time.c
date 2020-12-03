@@ -25,11 +25,21 @@
 static rt_thread_t thread;
 static rt_event_t  disp_event;
 static lv_style_t  main_style;
-static lv_obj_t   *obj_main;
-static lv_obj_t   *slider_label;
+static lv_style_t  roller_style;
+static lv_obj_t *  obj_main;
+static lv_obj_t *  obj_hour;
+static lv_obj_t *  obj_min;
 static struct rt_touchpanel_block lv_touch_block;
 
-static rt_uint8_t bl_time_table[4] = {5, 15, 30, 0};
+static const char *hour_str = "00\n01\n02\n03\n04\n05\n06\n07\n08\n09\n"
+                              "10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n"
+                              "20\n21\n22\n23";
+static const char *min_str =  "00\n01\n02\n03\n04\n05\n06\n07\n08\n09\n"
+                              "10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n"
+                              "20\n21\n22\n23\n24\n25\n26\n27\n28\n29\n"
+                              "30\n31\n32\n33\n34\n35\n36\n37\n38\n39\n"
+                              "40\n41\n42\n43\n44\n45\n46\n47\n48\n49\n"
+                              "50\n51\n52\n53\n54\n55\n56\n57\n58\n59";
 
 /*
  **************************************************************************************************
@@ -38,29 +48,23 @@ static rt_uint8_t bl_time_table[4] = {5, 15, 30, 0};
  *
  **************************************************************************************************
  */
-static void slider_event_cb(lv_obj_t *slider, lv_event_t event)
+static void lv_time_set_done(void)
 {
-    if (event == LV_EVENT_VALUE_CHANGED)
-    {
-        char buf[4]; /* max 3 bytes for number plus 1 null terminating byte */
-        app_main_data->bl = lv_slider_get_value(slider);
-        snprintf(buf, 4, "%u", app_main_data->bl);
-        lv_label_set_text(slider_label, buf);
-        rt_display_backlight_set(app_main_data->bl);
-    }
+    clock_time_t *time = &app_main_data->tmr_data;
+
+    char buf[8];
+    lv_roller_get_selected_str(obj_hour, buf, sizeof(buf));
+    time->hour = app_str2num(buf, 2);
+
+    lv_roller_get_selected_str(obj_min, buf, sizeof(buf));
+    time->minute = app_str2num(buf, 2);
 }
 
-static void dropdown_event_cb(lv_obj_t *obj, lv_event_t event)
+static void lv_time_set_design(void)
 {
-    if (event == LV_EVENT_VALUE_CHANGED)
-    {
-        app_main_data->bl_time = bl_time_table[lv_dropdown_get_selected(obj)];
-        app_main_set_bl_timeout(app_main_data->bl_time);
-    }
-}
+    clock_time_t *time = &app_main_data->tmr_data;
+    lv_obj_t * label;
 
-static void lv_backlight_design(void)
-{
     /* Background */
     lv_style_init(&main_style);
     lv_style_set_bg_color(&main_style, LV_STATE_DEFAULT, LV_COLOR_BLACK);
@@ -72,48 +76,31 @@ static void lv_backlight_design(void)
     lv_obj_set_size(obj_main, LV_FB_W, LV_FB_H);
     lv_obj_set_pos(obj_main, 0, 0);
 
-    /*Create a normal drop down list*/
-    uint16_t sel = 0;
-    if (app_main_data->bl_time == 0) sel = 3;
-    else if (app_main_data->bl_time <= 5) sel = 0;
-    else if (app_main_data->bl_time <= 15) sel = 1;
-    else if (app_main_data->bl_time <= 30) sel = 2;
-    lv_obj_t *ddlist = lv_dropdown_create(obj_main, NULL);
-    lv_dropdown_set_options(ddlist,
-                            "5 S\n"
-                            "15 S\n"
-                            "30 S\n"
-                            "Always on");
-    lv_obj_set_width(ddlist, 300);
-    lv_dropdown_set_selected(ddlist, sel);
-    lv_obj_align(ddlist, NULL, LV_ALIGN_IN_TOP_MID, 0, 150);
-    lv_obj_set_event_cb(ddlist, dropdown_event_cb);
+    /* Time setting */
+    lv_style_init(&roller_style);
+    lv_style_set_text_font(&roller_style, LV_STATE_DEFAULT, &lv_font_montserrat_44);
 
-    lv_obj_t *dd_label = lv_label_create(obj_main, NULL);
-    lv_label_set_text(dd_label, "Screen off time:");
-    lv_obj_align(dd_label, ddlist, LV_ALIGN_OUT_TOP_LEFT, 0, -20);
+    obj_hour = lv_roller_create(obj_main, NULL);
+    lv_obj_add_style(obj_hour, LV_STATE_DEFAULT, &roller_style);
+    lv_roller_set_options(obj_hour, hour_str, LV_ROLLER_MODE_INIFINITE);
+    lv_roller_set_visible_row_count(obj_hour, 2);
+    lv_obj_align(obj_hour, obj_main, LV_ALIGN_CENTER, -55, 10);
+    lv_roller_set_selected(obj_hour, time->hour - app_str2num(hour_str, 2), LV_ANIM_OFF);
 
-    /* Create a slider in the center of the display */
-    lv_obj_t *slider = lv_slider_create(obj_main, NULL);
-    lv_obj_set_size(slider, 300, 40);
-    lv_obj_align(slider, ddlist, LV_ALIGN_OUT_BOTTOM_MID, 0, 120);
-    lv_obj_set_event_cb(slider, slider_event_cb);
-    lv_slider_set_range(slider, 20, 100);
-    lv_slider_set_value(slider, app_main_data->bl, LV_ANIM_OFF);
+    label = lv_label_create(obj_main, NULL);
+    lv_label_set_text(label, "Hour");
+    lv_obj_align(label, obj_hour, LV_ALIGN_OUT_TOP_MID, 0, -30);
 
-    /* Create a label below the slider */
-    char buf[4];
-    rt_memset(buf, 0, 4);
-    snprintf(buf, 4, "%u", app_main_data->bl);
+    obj_min = lv_roller_create(obj_main, NULL);
+    lv_obj_add_style(obj_min, LV_STATE_DEFAULT, &roller_style);
+    lv_roller_set_options(obj_min, min_str, LV_ROLLER_MODE_INIFINITE);
+    lv_roller_set_visible_row_count(obj_min, 2);
+    lv_obj_align(obj_min, obj_main, LV_ALIGN_CENTER, 55, 10);
+    lv_roller_set_selected(obj_min, time->minute - app_str2num(min_str, 2), LV_ANIM_OFF);
 
-    lv_obj_t *bln_label = lv_label_create(obj_main, NULL);
-    lv_label_set_text(bln_label, "Brightness:");
-    lv_obj_align(bln_label, slider, LV_ALIGN_OUT_TOP_LEFT, 0, -20);
-
-    slider_label = lv_label_create(obj_main, NULL);
-    lv_label_set_text(slider_label, buf);
-    lv_obj_align(slider_label, slider, LV_ALIGN_OUT_TOP_RIGHT, -10, -20);
-    lv_obj_set_auto_realign(slider_label, true);
+    label = lv_label_create(obj_main, NULL);
+    lv_label_set_text(label, "Min");
+    lv_obj_align(label, obj_min, LV_ALIGN_OUT_TOP_MID, 0, -30);
 
     lv_refr_now(lv_disp_get_default());
 
@@ -153,6 +140,7 @@ static rt_err_t lv_touch_cb(struct rt_touch_data *point, rt_uint8_t num)
 
     if (touch_func_sel != 0)
     {
+        app_main_keep_screen_on();
         if (b->event == RT_TOUCH_EVENT_DOWN)
         {
             littlevgl2rtt_send_input_event(p->x_coordinate - b->x, p->y_coordinate - b->y, LITTLEVGL2RTT_INPUT_DOWN);
@@ -184,7 +172,7 @@ static void lv_touch_block_init(struct rt_touchpanel_block *block)
     block->y = LV_REGION_Y + ((info->height - LV_FB_H) / 2);
     block->w = LV_FB_W;
     block->h = LV_FB_H;
-    block->name = "backlight";
+    block->name = "settime";
     block->callback = lv_touch_cb;
 }
 
@@ -261,7 +249,7 @@ static void lv_lcd_flush(void)
  *
  **************************************************************************************************
  */
-static void lv_backlight_thread(void *p)
+static void lv_time_set_thread(void *p)
 {
     while (1)
     {
@@ -277,7 +265,7 @@ static void lv_backlight_thread(void *p)
  *
  **************************************************************************************************
  */
-void func_backlight_enter(void *param)
+void func_time_set_enter(void *param)
 {
     /* register lvgl send lcd I/F */
     rtlvgl_fb_monitor_cb_register(lv_lcd_flush);
@@ -296,12 +284,12 @@ void func_backlight_enter(void *param)
     RT_ASSERT(disp_event != RT_NULL);
 
     /* Creat thread for lvgl task running */
-    thread = rt_thread_create("funcbl", lv_backlight_thread, RT_NULL, 2048, 5, 10);
+    thread = rt_thread_create("funcbl", lv_time_set_thread, RT_NULL, 2048, 5, 10);
     RT_ASSERT(thread != RT_NULL);
     rt_thread_startup(thread);
 }
 
-void func_backlight_init(void *param)
+void func_time_set_init(void *param)
 {
     app_func_refrsh_param.win_id    = APP_CLOCK_WIN_2;
     app_func_refrsh_param.win_layer = WIN_TOP_LAYER;
@@ -313,13 +301,13 @@ void func_backlight_init(void *param)
     g_func_data->alpha_win = 0;
 
     // first display design
-    lv_backlight_design();
+    lv_time_set_design();
 
     // copy data to app_setting_main
-    app_func_set_preview(APP_FUNC_BREATH, g_lvdata->fb);
+    app_func_set_preview(APP_FUNC_BAROMETER, g_lvdata->fb);
 }
 
-void func_backlight_exit(void)
+void func_time_set_exit(void)
 {
     rt_thread_delete(thread);
 
@@ -329,7 +317,9 @@ void func_backlight_exit(void)
     rt_touchpanel_block_unregister(&lv_touch_block);
     rt_touchpanel_block_register(&app_main_data->touch_block);
 
+    lv_time_set_done();
+    lv_obj_clean_style_list(obj_hour, LV_STATE_DEFAULT);
+    lv_obj_clean_style_list(obj_min, LV_STATE_DEFAULT);
     lv_obj_clean_style_list(obj_main, LV_STATE_DEFAULT);
     lv_obj_del(obj_main);
-    save_app_info(app_main_data);
 }

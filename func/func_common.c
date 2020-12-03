@@ -394,6 +394,7 @@ static rt_err_t app_func_init_design(void *param)
 
     pdata->hor_offset = MENU_WIN_XRES;
 
+    app_func_set(APP_FUNC_BAROMETER, func_time_set_init, NULL, func_time_set_enter, NULL, func_time_set_exit, NULL);
     app_func_set(APP_FUNC_BREATH, func_backlight_init, NULL, func_backlight_enter, NULL, func_backlight_exit, NULL);
     app_func_set(APP_FUNC_EXERCISE, func_motion_init, NULL, func_motion_enter, NULL, func_motion_exit, NULL);
     app_func_set(APP_FUNC_SETTING, app_setting_init, NULL, app_func_show, NULL, NULL, NULL);

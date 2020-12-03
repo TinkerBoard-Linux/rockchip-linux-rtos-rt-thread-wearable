@@ -300,6 +300,7 @@ void app_refresh_request(void *param);
 /**
  * Direct refrest to LCD.
  */
+rt_uint32_t app_str2num(const char *str, uint8_t len);
 rt_err_t app_refresh_now(void *param);
 void app_main_touch_value_reset(void);
 void app_main_touch_register(struct app_touch_cb_t *tcb);
@@ -339,5 +340,6 @@ void app_main_set_bl_timeout(uint32_t set_time);
 #include "func_setting.h"
 #include "func_motion.h"
 #include "func_backlight.h"
+#include "func_time.h"
 
 #endif

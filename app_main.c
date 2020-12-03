@@ -97,7 +97,7 @@ rt_err_t app_load_img(img_load_info_t *info, rt_uint8_t *pbuf, rt_uint16_t w, rt
     return RT_EOK;
 }
 
-static rt_uint32_t app_str2num(const char *str, uint8_t len)
+rt_uint32_t app_str2num(const char *str, uint8_t len)
 {
     rt_uint32_t num = 0;
 
