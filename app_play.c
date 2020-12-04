@@ -24,6 +24,7 @@ static const char *notice_name[NOTICE_MAX] =
 #define EVENT_EXIT      (0x1U << 3)
 
 void app_play_callback(player_handle_t self, play_info_t info, void *userdata);
+static int app_stop = 0;
 static struct rt_event event;
 static void (*app_play_cb)(play_info_t info) = NULL;
 static void (*app_play_usr_cb)(void) = NULL;
@@ -94,11 +95,12 @@ void app_play_music_callback(play_info_t info)
     {
         rt_event_send(&event, EVENT_CALLBACK);
     }
-    else if (info != PLAY_INFO_STOP)
+    else if (app_stop == 0)
     {
         app_main_data->play_state = PLAYER_STATE_IDLE;
         app_music_design_update();
     }
+    app_stop = 0;
 }
 
 void app_play_notice_callback(play_info_t info)
@@ -164,7 +166,7 @@ void app_play_init(void)
     callback_handle = rt_thread_create("playcb",
                                        app_play_callback_handle,
                                        NULL,
-                                       1024,
+                                       2048,
                                        20,
                                        10);
     if (!callback_handle)
@@ -173,6 +175,7 @@ void app_play_init(void)
         rt_thread_startup(callback_handle);
 
     g_player = player_create(&player_cfg);
+    playback_set_volume(app_main_data->play_vol * 25);
 
     play_cfg.target = get_audio();
     app_play_display_target(play_cfg.target);
@@ -228,7 +231,10 @@ void app_play_music(char *target)
     play_cfg.target = target;
     play_cfg.preprocessor = (play_preprocessor_t)DEFAULT_FILE_PREPROCESSOR;
     play_cfg.need_free = 1;
-    app_main_data->play_state = PLAYER_STATE_RUNNING;
+    if (app_main_data->play_state != PLAYER_STATE_IDLE)
+        app_stop = 1;
+    else
+        app_main_data->play_state = PLAYER_STATE_RUNNING;
     player_play(g_player, &play_cfg);
     app_music_design_update();
 }
@@ -259,6 +265,17 @@ void app_play_pause(void)
         app_play_music(NULL);
         break;
     }
+}
+
+void app_play_stop(void)
+{
+    if (app_main_data->play_state != PLAYER_STATE_RUNNING)
+        return;
+
+    player_stop(g_player);
+    app_stop = 1;
+    app_main_data->play_state = PLAYER_STATE_IDLE;
+    app_music_design_update();
 }
 
 void app_play_random(void)
@@ -328,6 +345,23 @@ void app_play_prev(void)
         app_main_data->play_state = PLAYER_STATE_IDLE;
         app_music_design_update();
     }
+}
+
+void app_music_vol_switch(void)
+{
+    static int dir = 1;
+
+    if ((app_main_data->play_vol + dir) > APP_PLAY_VOL_MAX)
+        dir = -1;
+    if ((app_main_data->play_vol + dir) < APP_PLAY_VOL_MIN)
+        dir = 1;
+
+    app_main_data->play_vol += dir;
+
+    playback_set_volume(app_main_data->play_vol * 25);
+    save_app_info(app_main_data);
+
+    app_music_design_update();
 }
 
 void app_music_mode_switch(void)

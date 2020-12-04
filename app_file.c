@@ -29,6 +29,7 @@ void get_app_info(struct app_main_data_t *info)
     info->play_mode = APP_PLAY_LIST;
     info->bl_time = APP_TIMING_LIGHTOFF;
     info->bl = 50;
+    info->play_vol = APP_PLAY_VOL_DEFAULT;
     fd = fopen(APP_INFO_FILE, "rb");
     if (!fd)
     {
@@ -50,6 +51,9 @@ void get_app_info(struct app_main_data_t *info)
 
     if (app_info.bl >= 20 && app_info.bl <= 100)
         info->bl = app_info.bl;
+
+    if (app_info.play_vol >= APP_PLAY_VOL_MIN && app_info.play_vol <= APP_PLAY_VOL_MAX)
+        info->play_vol = app_info.play_vol;
 
     fclose(fd);
 }

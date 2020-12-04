@@ -1106,8 +1106,11 @@ static void app_main_thread(void *p)
         }
 
 #if APP_SUSPEND_RESUME_ENABLE
-        if ((app_main_data->bl_en == 0) && (app_main_data->pm_status == APP_PM_NONE))
+        if ((app_main_data->bl_en == 0) &&
+            (app_main_data->pm_status == APP_PM_NONE) &&
+            (app_main_data->play_state != PLAYER_STATE_RUNNING))
         {
+            app_play_stop();
 #ifdef POWER_KEY_BANK_PIN
             while (rt_pin_read(POWER_KEY_BANK_PIN) == PIN_HIGH)
                 rt_thread_mdelay(1);

@@ -247,6 +247,7 @@ struct app_main_data_t
 
     player_state_t play_state;
     rt_int8_t play_mode;
+    rt_int8_t play_vol;
 };
 extern struct app_main_data_t *app_main_data;
 extern struct app_info *g_app_info;

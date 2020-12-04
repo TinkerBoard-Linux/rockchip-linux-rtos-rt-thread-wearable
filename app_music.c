@@ -26,7 +26,17 @@
  */
 static player_state_t play_state;
 static rt_int8_t play_mode;
+static rt_int8_t play_vol;
 static int first_load = 1;
+
+static const char *app_play_vol_icons[5] =
+{
+    MUSIC_ICONS_PATH"/icon_music_mute.dta",
+    MUSIC_ICONS_PATH"/icon_music_vol_25.dta",
+    MUSIC_ICONS_PATH"/icon_music_vol_50.dta",
+    MUSIC_ICONS_PATH"/icon_music_vol_75.dta",
+    MUSIC_ICONS_PATH"/icon_music_vol_100.dta",
+};
 
 rt_err_t app_music_init(void)
 {
@@ -54,14 +64,6 @@ rt_err_t app_music_design(void *param)
             bg.pdata = fb + startx * (CLOCK_WIN_COLOR_DEPTH >> 3);
             rk_image_reset(&bg, CLOCK_WIN_COLOR_DEPTH >> 3);
         }
-
-        x = MUSIC_VOL_X;
-        y = MUSIC_VOL_Y;
-        buf = fb + (startx + x + (starty + y) * CLOCK_WIN_FB_W) * (CLOCK_WIN_COLOR_DEPTH >> 3);
-        img_load_info.w = MUSIC_VOL_W;
-        img_load_info.h = MUSIC_VOL_H;
-        img_load_info.name = MUSIC_ICONS_PATH"/icon_music_vol.dta";
-        app_load_img(&img_load_info, buf, CLOCK_WIN_FB_W, MUSIC_VOL_H, 0, (CLOCK_WIN_COLOR_DEPTH >> 3));
 
         x = MUSIC_MORE_X;
         y = MUSIC_MORE_Y;
@@ -130,6 +132,24 @@ rt_err_t app_music_design(void *param)
         img_load_info.h = MUSIC_MODE_H;
         img_load_info.name = txt;
         app_load_img(&img_load_info, buf, CLOCK_WIN_FB_W, MUSIC_MODE_H, 0, (CLOCK_WIN_COLOR_DEPTH >> 3));
+    }
+
+    if ((play_vol != app_main_data->play_vol) || first_load)
+    {
+        if (app_main_data->play_vol < APP_PLAY_VOL_MIN)
+            app_main_data->play_vol = APP_PLAY_VOL_MIN;
+        if (app_main_data->play_vol > APP_PLAY_VOL_MAX)
+            app_main_data->play_vol = APP_PLAY_VOL_MAX;
+
+        play_vol = app_main_data->play_vol;
+
+        x = MUSIC_VOL_X;
+        y = MUSIC_VOL_Y;
+        buf = fb + (startx + x + (starty + y) * CLOCK_WIN_FB_W) * (CLOCK_WIN_COLOR_DEPTH >> 3);
+        img_load_info.w = MUSIC_VOL_W;
+        img_load_info.h = MUSIC_VOL_H;
+        img_load_info.name = app_play_vol_icons[play_vol];
+        app_load_img(&img_load_info, buf, CLOCK_WIN_FB_W, MUSIC_VOL_H, 0, (CLOCK_WIN_COLOR_DEPTH >> 3));
     }
 
     first_load = 0;
@@ -276,7 +296,7 @@ struct obj_area
 struct obj_area btn[6] =
 {
     {MUSIC_MODE_X, MUSIC_MODE_Y, MUSIC_MODE_W, MUSIC_MODE_H, app_music_mode_switch},
-    {MUSIC_VOL_X,  MUSIC_VOL_Y,  MUSIC_VOL_W,  MUSIC_VOL_H, NULL},
+    {MUSIC_VOL_X,  MUSIC_VOL_Y,  MUSIC_VOL_W,  MUSIC_VOL_H, app_music_vol_switch},
     {MUSIC_MORE_X, MUSIC_MORE_Y, MUSIC_MORE_W, MUSIC_MORE_H, NULL},
 
     {MUSIC_PREV_TOUCH_X, MUSIC_PREV_TOUCH_Y, MUSIC_PREV_TOUCH_W, MUSIC_PREV_TOUCH_H, app_play_prev},
