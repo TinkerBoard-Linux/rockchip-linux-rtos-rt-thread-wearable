@@ -324,6 +324,8 @@ rt_err_t app_main_touch_smooth_design(void *param);
 rt_err_t app_main_touch_process(struct rt_touch_data *point, rt_uint8_t num);
 void app_main_keep_screen_on(void);
 void app_main_set_bl_timeout(uint32_t set_time);
+void app_slide_refresh(refrsh_request_param_t *param);
+void app_slide_refresh_undo(void);
 
 /**********************
  * SUB INCLUDE

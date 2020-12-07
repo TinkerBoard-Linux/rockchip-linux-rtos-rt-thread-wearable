@@ -412,16 +412,11 @@ static rt_err_t app_main_page_touch_move_lr(void *param)
 
     app_main_unregister_timeout_cb_if_is(app_show_charging_anim);
     app_main_unregister_timeout_cb_if_is(app_preview_enter);
-    if (pdata->smooth_design == 0)
-    {
-        pdata->smooth_design = 1;
-        move_lr_refr_param.wflag = 0x01 << main_page_refrsh_param.win_id;
-        move_lr_refr_param.wait = RT_WAITING_FOREVER;
-        move_lr_refr_param.id = ID_MAIN;
-        app_registe_refresh_done_cb(app_main_touch_smooth_design,
-                                    (void *)&move_lr_refr_param);
-        app_refresh_request(&move_lr_refr_param);
-    }
+
+    move_lr_refr_param.wflag = 0x01 << main_page_refrsh_param.win_id;
+    move_lr_refr_param.wait = RT_WAITING_FOREVER;
+    move_lr_refr_param.id = ID_MAIN;
+    app_slide_refresh(&move_lr_refr_param);
 
     return RT_EOK;
 }
@@ -520,16 +515,11 @@ rt_err_t app_main_page_touch_move_updn(void *param)
     }
     app_main_unregister_timeout_cb_if_is(app_show_charging_anim);
     app_main_unregister_timeout_cb_if_is(app_preview_enter);
-    if (pdata->smooth_design == 0)
-    {
-        pdata->smooth_design = 1;
-        move_updn_refr_param.wflag = 0x01 << main_page_refrsh_param.win_id | 0x01 << app_message_main_refrsh_param.win_id;
-        move_updn_refr_param.wait = RT_WAITING_FOREVER;
-        move_updn_refr_param.id = ID_MSG;
-        app_registe_refresh_done_cb(app_main_touch_smooth_design,
-                                    (void *)&move_updn_refr_param);
-        app_refresh_request(&move_updn_refr_param);
-    }
+
+    move_updn_refr_param.wflag = 0x01 << main_page_refrsh_param.win_id | 0x01 << app_message_main_refrsh_param.win_id;
+    move_updn_refr_param.wait = RT_WAITING_FOREVER;
+    move_updn_refr_param.id = ID_MSG;
+    app_slide_refresh(&move_updn_refr_param);
 
     return RT_EOK;
 }
@@ -548,7 +538,7 @@ static rt_err_t app_main_page_touch_move_up(void *param)
 
     app_main_unregister_timeout_cb_if_is(app_show_charging_anim);
     app_main_unregister_timeout_cb_if_is(app_preview_enter);
-    app_registe_refresh_done_cb(NULL, NULL);
+    app_slide_refresh_undo();
     app_main_touch_unregister();
     if (pdata->dir_mode == TOUCH_DIR_MODE_LR)
     {

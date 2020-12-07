@@ -329,6 +329,23 @@ rt_err_t app_main_touch_smooth_design(void *param)
     return RT_EOK;
 }
 
+void app_slide_refresh(refrsh_request_param_t *param)
+{
+#ifdef APP_USING_SMOOTH_REFRESH
+    if (app_main_data->smooth_design != 0)
+        return;
+    app_main_data->smooth_design = 1;
+    app_registe_refresh_done_cb(app_main_touch_smooth_design, param);
+#endif
+    app_refresh_request(param);
+}
+
+void app_slide_refresh_undo(void)
+{
+    app_main_data->smooth_design = 0;
+    app_registe_refresh_done_cb(NULL, NULL);
+}
+
 void app_main_keep_screen_on(void)
 {
 #if APP_TIMING_LIGHTOFF

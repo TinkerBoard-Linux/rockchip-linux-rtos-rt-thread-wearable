@@ -144,17 +144,11 @@ static rt_err_t app_func_touch_move_updn(void *param)
 
     fdata->ver_offset = fdata->ver_start - pdata->yoffset;
 
-    if (pdata->smooth_design == 0)
-    {
-        pdata->smooth_design = 1;
-        setting_refrsh_request_param.wflag = (0x01 << app_func_refrsh_param.win_id) |
-                                             ((fdata->alpha_win) << alpha_win_refr_param.win_id);
-        setting_refrsh_request_param.wait = RT_WAITING_FOREVER;
-        setting_refrsh_request_param.id = ID_FUNC_UPDN;
-        app_registe_refresh_done_cb(app_main_touch_smooth_design,
-                                    &setting_refrsh_request_param);
-        app_refresh_request(&setting_refrsh_request_param);
-    }
+    setting_refrsh_request_param.wflag = (0x01 << app_func_refrsh_param.win_id) |
+                                         ((fdata->alpha_win) << alpha_win_refr_param.win_id);
+    setting_refrsh_request_param.wait = RT_WAITING_FOREVER;
+    setting_refrsh_request_param.id = ID_FUNC_UPDN;
+    app_slide_refresh(&setting_refrsh_request_param);
 
     return RT_EOK;
 }
@@ -223,18 +217,12 @@ static rt_err_t app_func_touch_move_lr(void *param)
     }
     fdata->hor_offset = -pdata->xoffset;
 
-    if (pdata->smooth_design == 0)
-    {
-        pdata->smooth_design = 1;
-        setting_refrsh_request_param.wflag = (0x01 << app_func_refrsh_param.win_id) |
-                                             (0x01 << app_message_main_refrsh_param.win_id) |
-                                             ((fdata->alpha_win) << alpha_win_refr_param.win_id);
-        setting_refrsh_request_param.wait = RT_WAITING_FOREVER;
-        setting_refrsh_request_param.id = ID_FUNC_LR;
-        app_registe_refresh_done_cb(app_main_touch_smooth_design,
-                                    &setting_refrsh_request_param);
-        app_refresh_request(&setting_refrsh_request_param);
-    }
+    setting_refrsh_request_param.wflag = (0x01 << app_func_refrsh_param.win_id) |
+                                         (0x01 << app_message_main_refrsh_param.win_id) |
+                                         ((fdata->alpha_win) << alpha_win_refr_param.win_id);
+    setting_refrsh_request_param.wait = RT_WAITING_FOREVER;
+    setting_refrsh_request_param.id = ID_FUNC_LR;
+    app_slide_refresh(&setting_refrsh_request_param);
 
     return RT_EOK;
 }
@@ -251,11 +239,10 @@ rt_err_t app_func_touch_move_up(void *param)
     struct rt_touch_data *down_p   = &pdata->down_point[0];
     int16_t floor_ofs, ceil_ofs;
 
+    app_slide_refresh_undo();
+    app_main_touch_unregister();
     if (pdata->dir_mode == TOUCH_DIR_MODE_UPDN)
     {
-        app_registe_refresh_done_cb(NULL, NULL);
-        app_main_touch_unregister();
-
         if (fdata->ver_offset < 0)
         {
             fdata->ver_offset = 0;
@@ -282,9 +269,6 @@ rt_err_t app_func_touch_move_up(void *param)
     }
     else if (pdata->dir_mode == TOUCH_DIR_MODE_LR)
     {
-        app_registe_refresh_done_cb(NULL, NULL);
-        app_main_touch_unregister();
-
         if ((down_p->x_coordinate) > (cur_p->x_coordinate))
         {
             touch_moveup_design_param.dir = 1;

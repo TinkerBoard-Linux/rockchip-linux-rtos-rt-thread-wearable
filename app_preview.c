@@ -169,16 +169,10 @@ static rt_err_t app_preview_touch_move_lr(void *param)
 
     fdata->hor_offset = fdata->hor_start - pdata->xoffset;
 
-    if (pdata->smooth_design == 0)
-    {
-        pdata->smooth_design = 1;
-        clkmov_refrsh_request_param.wflag = 0x01 << app_preview_refrsh_param.win_id;
-        clkmov_refrsh_request_param.wait = RT_WAITING_FOREVER;
-        clkmov_refrsh_request_param.id = ID_FUNC_LR;
-        app_registe_refresh_done_cb(app_main_touch_smooth_design,
-                                    (void *)&clkmov_refrsh_request_param);
-        app_refresh_request(&clkmov_refrsh_request_param);
-    }
+    clkmov_refrsh_request_param.wflag = 0x01 << app_preview_refrsh_param.win_id;
+    clkmov_refrsh_request_param.wait = RT_WAITING_FOREVER;
+    clkmov_refrsh_request_param.id = ID_FUNC_LR;
+    app_slide_refresh(&clkmov_refrsh_request_param);
 
     return RT_EOK;
 }
@@ -220,7 +214,7 @@ rt_err_t app_preview_touch_move_up(void *param)
 
     if (pdata->dir_mode == TOUCH_DIR_MODE_LR)
     {
-        app_registe_refresh_done_cb(NULL, NULL);
+        app_slide_refresh_undo();
         app_main_touch_unregister();
 
         if (fdata->hor_offset < 0)
