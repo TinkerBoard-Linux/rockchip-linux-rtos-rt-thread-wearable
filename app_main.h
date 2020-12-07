@@ -164,6 +164,12 @@ typedef struct
 
 typedef struct
 {
+    rt_uint8_t win_id;
+    rt_uint8_t win_layer;
+} app_disp_refrsh_param_t;
+
+typedef struct
+{
     rt_int32_t offset;
     rt_int8_t dir;
 } mov_design_param;
@@ -190,7 +196,6 @@ struct app_touch_cb_t
     rt_err_t (*tp_touch_up)(void *param);
 };
 
-#define CLOCK_STYLE_MAX_NUM     4
 struct app_main_data_t
 {
     rt_display_data_t disp;

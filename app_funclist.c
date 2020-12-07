@@ -42,7 +42,7 @@
  **************************************************************************************************
  */
 struct app_funclist_data_t *g_funclist_data = RT_NULL;
-app_funclist_refrsh_param_t app_funclist_refrsh_param;
+app_disp_refrsh_param_t app_funclist_refrsh_param;
 
 extern rt_err_t app_main_page_touch_move_updn(void *param);
 extern rt_err_t app_message_touch_move_up(void *param);
@@ -63,7 +63,7 @@ rt_err_t app_funclist_refresh(struct rt_display_config *wincfg, void *param)
 {
     struct rt_device_graphic_info *info = &app_main_data->disp->info;
     struct app_funclist_data_t *pdata = g_funclist_data;
-    app_funclist_refrsh_param_t *par = (app_funclist_refrsh_param_t *)param;
+    app_disp_refrsh_param_t *par = (app_disp_refrsh_param_t *)param;
 
     wincfg->winId   = par->win_id;
     wincfg->zpos    = par->win_layer;

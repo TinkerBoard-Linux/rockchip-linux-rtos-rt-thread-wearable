@@ -50,7 +50,7 @@
  **************************************************************************************************
  */
 struct app_message_main_data_t *g_message_main_data = RT_NULL;
-app_message_main_refrsh_param_t app_message_main_refrsh_param;
+app_disp_refrsh_param_t app_message_main_refrsh_param;
 
 /*
  **************************************************************************************************
@@ -567,7 +567,7 @@ rt_err_t app_message_main_refresh(struct rt_display_config *wincfg, void *param)
     struct app_message_main_data_t *pdata = g_message_main_data;
     struct app_funclist_data_t *fdata = g_funclist_data;
     struct app_func_data_t *fcdata = g_func_data;
-    app_message_main_refrsh_param_t *par = (app_message_main_refrsh_param_t *)param;
+    app_disp_refrsh_param_t *par = (app_disp_refrsh_param_t *)param;
     rt_int16_t offset;
 
     //RT_ASSERT(pdata->mov_offset > 0);

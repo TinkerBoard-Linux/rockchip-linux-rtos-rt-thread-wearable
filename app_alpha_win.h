@@ -24,13 +24,7 @@
  **************************************************************************************************
  */
 
-// Params
-typedef struct
-{
-    rt_uint8_t win_id;
-    rt_uint8_t win_layer;
-} alpha_win_refrsh_param_t;
-extern alpha_win_refrsh_param_t alpha_win_refr_param;
+extern app_disp_refrsh_param_t alpha_win_refr_param;
 
 /*
  **************************************************************************************************

@@ -55,7 +55,7 @@ void app_main_page_music_update(void);
  **************************************************************************************************
  */
 struct app_main_page_data_t *app_main_page_data = RT_NULL;
-main_page_refrsh_param_t main_page_refrsh_param;
+app_disp_refrsh_param_t main_page_refrsh_param;
 
 app_main_page_timer_cb_t main_page_timer_cb[CLOCK_HOR_PAGE_MAX] =
 {
@@ -193,7 +193,7 @@ rt_err_t app_main_page_refresh(struct rt_display_config *wincfg, void *param)
     struct rt_device_graphic_info *info = &app_main_data->disp->info;
     struct app_main_page_data_t *pdata = app_main_page_data;
     struct app_message_main_data_t *msgdata = g_message_main_data;
-    main_page_refrsh_param_t *par = (main_page_refrsh_param_t *)param;
+    app_disp_refrsh_param_t *par = (app_disp_refrsh_param_t *)param;
     uint32_t start_x, start_y;
 
     /* Make sure the flip dose not exceed one page */

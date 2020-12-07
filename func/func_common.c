@@ -29,7 +29,7 @@
  **************************************************************************************************
  */
 struct app_func_data_t *g_func_data = RT_NULL;
-app_func_refrsh_param_t app_func_refrsh_param;
+app_disp_refrsh_param_t app_func_refrsh_param;
 static void *old_callback;
 static void *old_param;
 
@@ -44,7 +44,7 @@ static rt_err_t app_func_refresh(struct rt_display_config *wincfg, void *param)
 {
     struct rt_device_graphic_info *info = &app_main_data->disp->info;
     struct app_func_data_t *fdata = g_func_data;
-    app_func_refrsh_param_t *par = (app_func_refrsh_param_t *)param;
+    app_disp_refrsh_param_t *par = (app_disp_refrsh_param_t *)param;
     int16_t start_x, start_y;
 
     start_y = fdata->ver_offset;

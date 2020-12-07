@@ -29,13 +29,7 @@
  **************************************************************************************************
  */
 
-// Params
-typedef struct
-{
-    rt_uint8_t win_id;
-    rt_uint8_t win_layer;
-} app_funclist_refrsh_param_t;
-extern app_funclist_refrsh_param_t app_funclist_refrsh_param;
+extern app_disp_refrsh_param_t app_funclist_refrsh_param;
 
 /*
  **************************************************************************************************

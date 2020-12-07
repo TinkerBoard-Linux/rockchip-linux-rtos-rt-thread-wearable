@@ -49,7 +49,7 @@
  *
  **************************************************************************************************
  */
-alpha_win_refrsh_param_t alpha_win_refr_param;
+app_disp_refrsh_param_t alpha_win_refr_param;
 #if ENABLE_ALPHA_WIN
 struct g_alpha_win_data_t *g_alpha_win_data = RT_NULL;
 static void *old_callback;
@@ -70,7 +70,7 @@ rt_err_t alpha_win_refresh(struct rt_display_config *wincfg, void *param)
     struct rt_device_graphic_info *info = &app_main_data->disp->info;
     struct g_alpha_win_data_t *pdata = g_alpha_win_data;
     struct app_func_data_t *fdata = g_func_data;
-    alpha_win_refrsh_param_t *par = (alpha_win_refrsh_param_t *)param;
+    app_disp_refrsh_param_t *par = (app_disp_refrsh_param_t *)param;
     int offset = fdata->hor_offset > 0 ? (fdata->hor_offset > ALPHA_WIN_XRES ? ALPHA_WIN_XRES : fdata->hor_offset) : 0 ;
 
     wincfg->winId   = par->win_id;

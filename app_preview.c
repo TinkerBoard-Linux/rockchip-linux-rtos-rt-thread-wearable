@@ -45,7 +45,7 @@
  **************************************************************************************************
  */
 struct app_preview_data_t *g_preview_data = RT_NULL;
-app_preview_refrsh_param_t app_preview_refrsh_param;
+app_disp_refrsh_param_t app_preview_refrsh_param;
 
 /*
  **************************************************************************************************
@@ -70,7 +70,7 @@ rt_err_t app_preview_refresh(struct rt_display_config *wincfg, void *param)
 {
     struct rt_device_graphic_info *info = &app_main_data->disp->info;
     struct app_preview_data_t *pdata = g_preview_data;
-    app_preview_refrsh_param_t *par = (app_preview_refrsh_param_t *)param;
+    app_disp_refrsh_param_t *par = (app_disp_refrsh_param_t *)param;
 
     if (pdata->hor_offset < 0)
         pdata->hor_offset = 0;

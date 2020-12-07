@@ -59,12 +59,7 @@ typedef struct
     rt_int8_t buf_id;
 } main_page_design_param_t;
 
-typedef struct
-{
-    rt_uint8_t win_id;
-    rt_uint8_t win_layer;
-} main_page_refrsh_param_t;
-extern main_page_refrsh_param_t main_page_refrsh_param;
+extern app_disp_refrsh_param_t main_page_refrsh_param;
 
 /*
  **************************************************************************************************

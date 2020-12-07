@@ -28,8 +28,8 @@ uint32_t m_bpp_lut[256] = {0};
 static int g_first_dta;
 
 struct app_charging_data_t *g_charging_data = RT_NULL;
-app_charging_refrsh_param_t app_charging_refrsh_param;
-app_charging_refrsh_param_t app_charging_refrsh_lut_param;
+app_disp_refrsh_param_t app_charging_refrsh_param;
+app_disp_refrsh_param_t app_charging_refrsh_lut_param;
 static void app_charing_anim_unload(void);
 
 #if SHOW_TICK
@@ -152,7 +152,7 @@ rt_err_t app_charging_win_refresh(struct rt_display_config *wincfg, void *param)
 {
     struct rt_device_graphic_info *info = &app_main_data->disp->info;
     struct app_charging_data_t *pdata = g_charging_data;
-    main_page_refrsh_param_t *par = (main_page_refrsh_param_t *)param;
+    app_disp_refrsh_param_t *par = (app_disp_refrsh_param_t *)param;
 
     // rt_kprintf("%s %d\n", __func__, par->win_id);
     wincfg->winId   = par->win_id;
@@ -179,7 +179,7 @@ rt_err_t app_charging_win_refresh_lut(struct rt_display_config *wincfg, void *pa
 {
     struct rt_device_graphic_info *info = &app_main_data->disp->info;
     struct app_charging_data_t *pdata = g_charging_data;
-    main_page_refrsh_param_t *par = (main_page_refrsh_param_t *)param;
+    app_disp_refrsh_param_t *par = (app_disp_refrsh_param_t *)param;
 
     // rt_kprintf("%s %d\n", __func__, par->win_id);
     wincfg->winId   = par->win_id;

@@ -31,13 +31,7 @@ enum ver_page
     VER_PAGE_TOP    = 1,
 };
 
-// Params
-typedef struct
-{
-    rt_uint8_t win_id;
-    rt_uint8_t win_layer;
-} app_message_main_refrsh_param_t;
-extern app_message_main_refrsh_param_t app_message_main_refrsh_param;
+extern app_disp_refrsh_param_t app_message_main_refrsh_param;
 
 /*
  **************************************************************************************************
