@@ -63,7 +63,7 @@ void plot(uint8_t *fb, int x, int y, float c)
 
 static void design_now_value(int val)
 {
-    struct app_func_data_t *pdata = g_func_data;
+    struct app_page_data_t *page = g_func_page;
     struct app_lvgl_label_design value;
     int start_x, start_y;
     char txt[128];
@@ -80,13 +80,13 @@ static void design_now_value(int val)
     value.img[0].width = MENU_WIN_XRES - start_x;
     value.img[0].height = lv_font_montserrat_44.line_height;
     value.img[0].stride = MENU_WIN_FB_W * (MENU_WIN_COLOR_DEPTH >> 3);
-    value.img[0].pdata = pdata->fb + (start_x + start_y * MENU_WIN_XRES) * (MENU_WIN_COLOR_DEPTH >> 3);
+    value.img[0].pdata = page->fb + (start_x + start_y * MENU_WIN_XRES) * (MENU_WIN_COLOR_DEPTH >> 3);
     app_lv_label_design(&value);
 }
 
 static void design_value_range(int max, int min)
 {
-    struct app_func_data_t *pdata = g_func_data;
+    struct app_page_data_t *page = g_func_page;
     struct app_lvgl_label_design value;
     img_load_info_t img_load_info;
     rt_uint8_t *buf;
@@ -106,7 +106,7 @@ static void design_value_range(int max, int min)
     value.img[0].width = MENU_WIN_XRES - start_x;
     value.img[0].height = lv_font_montserrat_30.line_height;
     value.img[0].stride = MENU_WIN_FB_W * (MENU_WIN_COLOR_DEPTH >> 3);
-    value.img[0].pdata = pdata->fb + (start_x + start_y * MENU_WIN_XRES) * (MENU_WIN_COLOR_DEPTH >> 3);
+    value.img[0].pdata = page->fb + (start_x + start_y * MENU_WIN_XRES) * (MENU_WIN_COLOR_DEPTH >> 3);
     app_lv_label_design(&value);
 
     start_x = HEARTRATE_FALL_ICON_X + HEARTRATE_FALL_ICON_W;
@@ -114,12 +114,12 @@ static void design_value_range(int max, int min)
 
     snprintf(txt, sizeof(txt), "%3d", min);
     value.img[0].width = MENU_WIN_XRES - start_x;
-    value.img[0].pdata = pdata->fb + (start_x + start_y * MENU_WIN_XRES) * (MENU_WIN_COLOR_DEPTH >> 3);
+    value.img[0].pdata = page->fb + (start_x + start_y * MENU_WIN_XRES) * (MENU_WIN_COLOR_DEPTH >> 3);
     app_lv_label_design(&value);
 
     start_x = HEARTRATE_RISE_ICON_X;
     start_y = HEARTRATE_RISE_ICON_Y;
-    buf = pdata->fb + (start_x + start_y * MENU_WIN_XRES) * (MENU_WIN_COLOR_DEPTH >> 3);
+    buf = page->fb + (start_x + start_y * MENU_WIN_XRES) * (MENU_WIN_COLOR_DEPTH >> 3);
     img_load_info.w = HEARTRATE_RISE_ICON_W;
     img_load_info.h = HEARTRATE_RISE_ICON_H;
     img_load_info.name = ICONS_PATH"/icon_heart_rise.dta";
@@ -127,7 +127,7 @@ static void design_value_range(int max, int min)
 
     start_x = HEARTRATE_FALL_ICON_X;
     start_y = HEARTRATE_FALL_ICON_Y;
-    buf = pdata->fb + (start_x + start_y * MENU_WIN_XRES) * (MENU_WIN_COLOR_DEPTH >> 3);
+    buf = page->fb + (start_x + start_y * MENU_WIN_XRES) * (MENU_WIN_COLOR_DEPTH >> 3);
     img_load_info.w = HEARTRATE_FALL_ICON_W;
     img_load_info.h = HEARTRATE_FALL_ICON_H;
     img_load_info.name = ICONS_PATH"/icon_heart_fall.dta";
@@ -136,7 +136,7 @@ static void design_value_range(int max, int min)
 
 static void design_form(void)
 {
-    struct app_func_data_t *pdata = g_func_data;
+    struct app_page_data_t *page = g_func_page;
     struct app_lvgl_label_design value;
     int start_x, start_y;
     int line_start_x, line_start_y;
@@ -163,10 +163,10 @@ static void design_form(void)
         value.img[0].width = MENU_WIN_XRES - start_x;
         value.img[0].height = lv_font_montserrat_30.line_height;
         value.img[0].stride = MENU_WIN_FB_W * (MENU_WIN_COLOR_DEPTH >> 3);
-        value.img[0].pdata = pdata->fb + (start_x + start_y * MENU_WIN_XRES) * (MENU_WIN_COLOR_DEPTH >> 3);
+        value.img[0].pdata = page->fb + (start_x + start_y * MENU_WIN_XRES) * (MENU_WIN_COLOR_DEPTH >> 3);
         app_lv_label_design(&value);
 
-        buf = (uint16_t *)(pdata->fb + (line_start_x + line_start_y * MENU_WIN_XRES) * (MENU_WIN_COLOR_DEPTH >> 3));
+        buf = (uint16_t *)(page->fb + (line_start_x + line_start_y * MENU_WIN_XRES) * (MENU_WIN_COLOR_DEPTH >> 3));
         for (int j = 0; j < HEARTRATE_CHART_W; j++)
         {
             *(buf + j) = 0xFFFF;
@@ -191,7 +191,7 @@ static void design_form(void)
         value.img[0].width = MENU_WIN_XRES - start_x;
         value.img[0].height = lv_font_montserrat_24.line_height;
         value.img[0].stride = MENU_WIN_FB_W * (MENU_WIN_COLOR_DEPTH >> 3);
-        value.img[0].pdata = pdata->fb + (start_x + start_y * MENU_WIN_XRES) * (MENU_WIN_COLOR_DEPTH >> 3);
+        value.img[0].pdata = page->fb + (start_x + start_y * MENU_WIN_XRES) * (MENU_WIN_COLOR_DEPTH >> 3);
         app_lv_label_design(&value);
 
         start_x += HEARTRATE_CHART_W / 4;
@@ -200,7 +200,7 @@ static void design_form(void)
 
 static void design_heartbeat_anim(void)
 {
-    struct app_func_data_t *pdata = g_func_data;
+    struct app_page_data_t *page = g_func_page;
     int start_x, start_y;
     struct image_st ips, ipd;
     struct image_st ps;
@@ -208,7 +208,7 @@ static void design_heartbeat_anim(void)
     ps.width = img_heart_info.w;
     ps.height = img_heart_info.h;
     ps.stride = MENU_WIN_XRES * (MENU_WIN_COLOR_DEPTH >> 3);
-    ps.pdata = pdata->fb + (HEARTRATE_ICON_Y) * ps.stride + (HEARTRATE_ICON_X) * (MENU_WIN_COLOR_DEPTH >> 3);
+    ps.pdata = page->fb + (HEARTRATE_ICON_Y) * ps.stride + (HEARTRATE_ICON_X) * (MENU_WIN_COLOR_DEPTH >> 3);
 
     rk_image_reset(&ps, MSG_WIN_COLOR_DEPTH >> 3);
 
@@ -223,7 +223,7 @@ static void design_heartbeat_anim(void)
     ipd.width = img_heart_info.w - scale_val_grp[scale_index];
     ipd.height = img_heart_info.h - scale_val_grp[scale_index];
     ipd.stride = MENU_WIN_FB_W * (MENU_WIN_COLOR_DEPTH >> 3);
-    ipd.pdata = pdata->fb + (start_x + start_y * MENU_WIN_XRES) * (MENU_WIN_COLOR_DEPTH >> 3);
+    ipd.pdata = page->fb + (start_x + start_y * MENU_WIN_XRES) * (MENU_WIN_COLOR_DEPTH >> 3);
 
     rk_scale_process(&ips, &ipd, TYPE_ARGB8888_565);
     scale_index++;
@@ -232,10 +232,10 @@ static void design_heartbeat_anim(void)
 }
 
 static int last_second = -1;
-static refrsh_request_param_t heartrate_refrsh_request_param;
+static page_refrsh_request_param_t g_refr_param;
 rt_err_t heartrate_update_design(void *param)
 {
-    struct app_func_data_t *pdata = g_func_data;
+    struct app_page_data_t *page = g_func_page;
     struct app_main_data_t *maindata = app_main_data;
     uint8_t *fb;
     int start_x, start_y;
@@ -255,7 +255,7 @@ rt_err_t heartrate_update_design(void *param)
         start_x = HEARTRATE_CHART_X;
         start_y = HEARTRATE_CHART_Y;
         gap = HEARTRATE_CHART_W / 24;
-        fb = (uint8_t *)(pdata->fb + (start_x + start_y * MENU_WIN_XRES) * (MENU_WIN_COLOR_DEPTH >> 3));
+        fb = (uint8_t *)(page->fb + (start_x + start_y * MENU_WIN_XRES) * (MENU_WIN_COLOR_DEPTH >> 3));
 
         if (g_rate_cnt == 24)
         {
@@ -323,9 +323,9 @@ rt_err_t heartrate_update_design(void *param)
 
     if (do_refr)
     {
-        heartrate_refrsh_request_param.wflag = (0x1 << app_func_refrsh_param.win_id);
-        heartrate_refrsh_request_param.wait = RT_WAITING_FOREVER;
-        app_refresh_request(&heartrate_refrsh_request_param);
+        g_refr_param.page = page;
+        g_refr_param.page_num = 1;
+        app_refresh_request(&g_refr_param);
     }
 
     return RT_EOK;
@@ -339,10 +339,10 @@ void func_heartrate_update(void)
 
 void func_heartrate_exit(void)
 {
-    struct app_func_data_t *pdata = g_func_data;
+    struct app_page_data_t *page = g_func_page;
 
     app_main_timer_cb_unregister();
-    rt_free_psram(pdata->fb);
+    rt_free_psram(page->fb);
 }
 
 void func_heartrate_enter(void *param)
@@ -353,7 +353,8 @@ void func_heartrate_enter(void *param)
 
 void func_heartrate_init(void *param)
 {
-    struct app_func_data_t *pdata = g_func_data;
+    struct app_page_data_t *page = g_func_page;
+    struct app_func_private *pdata = page->private;
     int start_x, start_y;
     int first_v, next_v = 0;
     int gap;
@@ -361,24 +362,24 @@ void func_heartrate_init(void *param)
     uint8_t *fb;
 
     /* framebuffer malloc */
-    pdata->fblen = MENU_WIN_XRES * MENU_WIN_YRES * (MENU_WIN_COLOR_DEPTH >> 3);
-    pdata->fb   = (rt_uint8_t *)rt_malloc_psram(pdata->fblen);
-    RT_ASSERT(pdata->fb != NULL);
-    rt_memset((void *)pdata->fb, 0x0, pdata->fblen);
+    page->fblen = MENU_WIN_XRES * MENU_WIN_YRES * (MENU_WIN_COLOR_DEPTH >> 3);
+    page->fb   = (rt_uint8_t *)rt_malloc_psram(page->fblen);
+    RT_ASSERT(page->fb != NULL);
+    rt_memset((void *)page->fb, 0x0, page->fblen);
 
-    app_func_refrsh_param.win_id    = APP_CLOCK_WIN_2;
-    app_func_refrsh_param.win_layer = WIN_TOP_LAYER;
-
-    pdata->max_w = MENU_WIN_XRES;
-    pdata->max_h = MENU_WIN_YRES;
     pdata->alpha_win = 0;
+    page->w = MENU_WIN_XRES;
+    page->h = MENU_WIN_YRES;
+    page->vir_w = MENU_WIN_XRES;
+    page->ver_offset = 0;
+    page->hor_offset = 0;
 
     design_form();
 
     start_x = HEARTRATE_CHART_X;
     start_y = HEARTRATE_CHART_Y;
     gap = HEARTRATE_CHART_W / 24;
-    fb = (uint8_t *)(pdata->fb + (start_x + start_y * MENU_WIN_XRES) * (MENU_WIN_COLOR_DEPTH >> 3));
+    fb = (uint8_t *)(page->fb + (start_x + start_y * MENU_WIN_XRES) * (MENU_WIN_COLOR_DEPTH >> 3));
     srand(rt_tick_get());
 
     first_v = HEART_RATE_MIN;
@@ -409,5 +410,5 @@ void func_heartrate_init(void *param)
     scale_index = 0;
     design_heartbeat_anim();
 
-    app_func_set_preview(APP_FUNC_HEARTRATE, pdata->fb);
+    app_func_set_preview(APP_FUNC_HEARTRATE, page->fb);
 }

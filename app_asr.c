@@ -72,13 +72,13 @@ static int asr_init(void)
     {
         rt_kprintf("Cannot find dsp0\n");
         list_device();
-        return RT_ERROR;
+        return -RT_ERROR;
     }
     rt_device_open(g_dsp_dev, RT_DEVICE_OFLAG_RDWR);
 
     rt_device_control(g_dsp_dev, RKDSP_CTL_SET_FREQ, (void *)(396000000));
     rt_device_control(g_dsp_dev, RKDSP_CTL_GET_FREQ, (void *)&rate);
-    rt_kprintf("Current dsp freq: %d MHz\n", rate / 1000000);
+    // rt_kprintf("Current dsp freq: %d MHz\n", rate / 1000000);
 #endif
 
     g_work = (struct dsp_work *)rkdsp_malloc(sizeof(struct dsp_work));

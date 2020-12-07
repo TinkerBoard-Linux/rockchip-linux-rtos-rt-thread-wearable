@@ -29,7 +29,13 @@
  **************************************************************************************************
  */
 
-extern app_disp_refrsh_param_t app_func_refrsh_param;
+struct app_func_private
+{
+    rt_int8_t   alpha_win;
+    rt_int8_t   func_id;
+};
+extern struct app_page_data_t *g_func_page;
+extern struct app_touch_cb_t app_func_main_touch_cb;
 
 /*
  **************************************************************************************************
@@ -39,26 +45,10 @@ extern app_disp_refrsh_param_t app_func_refrsh_param;
  **************************************************************************************************
  */
 
-struct app_func_data_t
-{
-    rt_uint8_t *fb;
-    rt_uint32_t fblen;
-
-    rt_int8_t   alpha_win;
-
-    rt_int16_t  hor_offset;
-    rt_int16_t  ver_offset;
-    rt_int16_t  ver_start;
-
-    rt_int16_t  max_w;
-    rt_int16_t  max_h;
-
-    rt_int8_t   func_id;
-};
-extern struct app_func_data_t *g_func_data;
-extern struct app_touch_cb_t app_func_main_touch_cb;
-
 void app_func_memory_init(void);
 void app_func_show(void *param);
+void app_func_common_exit(void);
+void app_func_merge_touch_ops(struct app_touch_cb_t *ops);
+void app_func_revert_touch_ops(struct app_touch_cb_t *ops);
 
 #endif

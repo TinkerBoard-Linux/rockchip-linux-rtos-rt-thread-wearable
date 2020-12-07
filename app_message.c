@@ -49,7 +49,7 @@
  *
  **************************************************************************************************
  */
-struct app_message_main_data_t *g_message_main_data = RT_NULL;
+struct app_page_data_t *g_message_page = RT_NULL;
 app_disp_refrsh_param_t app_message_main_refrsh_param;
 
 /*
@@ -74,13 +74,14 @@ struct app_lvgl_label_design g_no_message;
 struct image_st g_pre_tips = {0, 0, 0, NULL};
 struct image_st g_pre_area[2] = {{0, 0, 0, NULL}, {0, 0, 0, NULL}};
 struct image_st g_pre_txt[2] = {{0, 0, 0, NULL}, {0, 0, 0, NULL}};
-static refrsh_request_param_t clock_move_updn_refr_param;
+static page_refrsh_request_param_t g_refr_param;
 
 static rt_err_t app_lv_new_message_design(void *param);
 design_cb_t lv_new_message_design_t = {.cb = app_lv_new_message_design,};
 static rt_err_t app_lv_new_message_design(void *param)
 {
-    struct app_message_main_data_t *pdata = g_message_main_data;
+    struct app_page_data_t *page = g_message_page;
+    struct app_msg_private *pdata = (struct app_msg_private *)page->private;
     struct app_main_data_t *maindata = app_main_data;
     struct image_st ips, ipd;
     uint32_t start_x, start_y;
@@ -117,7 +118,7 @@ static rt_err_t app_lv_new_message_design(void *param)
 
     rk_scale_process(&ips, &ipd, TYPE_RGB565_565);
 
-    ipd.width = g_name.img[0].width + scale_index * 4;//(uint32_t)(g_name.img[0].width * ((float)ipd.width / 2 / ips.width));
+    ipd.width = g_name.img[0].width + scale_index * 4;
     ipd.height = (uint32_t)(g_name.img[0].height * ((float)ipd.width / g_name.img[0].width));
     ipd.stride = MSG_WIN_FB_W * (MSG_WIN_COLOR_DEPTH >> 3);
     start_y = MSG_NAME_Y_START - (int)((float)scale_index * (MSG_NAME_Y_START - MSG_NAME_Y_MID) / MSG_ANIM_STEP);
@@ -127,16 +128,20 @@ static rt_err_t app_lv_new_message_design(void *param)
 
     rk_scale_process(&g_name.img[0], &ipd, TYPE_RGB565_565);
 
-    clock_move_updn_refr_param.wflag = 0x01 << app_message_main_refrsh_param.win_id;
-    clock_move_updn_refr_param.wait = RT_WAITING_FOREVER;
-    app_refresh_request(&clock_move_updn_refr_param);
+    pdata->buf_id = buf_id;
+    page->fb = pdata->fb[buf_id];
+
+    g_refr_param.page = g_message_page;
+    g_refr_param.page_num = 1;
+    app_refresh_request(&g_refr_param);
+
     scale_index++;
     if (scale_index > MSG_ANIM_STEP)
     {
         scale_index = 0;
         app_main_register_timeout_cb(app_message_page_show_message, NULL, 1500);
     }
-    else if (maindata->ver_page == VER_PAGE_BOTTOM)
+    else
     {
         app_design_request(0, &lv_new_message_design_t, RT_NULL);
     }
@@ -145,8 +150,6 @@ static rt_err_t app_lv_new_message_design(void *param)
     rt_kprintf("design %p [%lu ms]\n", fb, et - st);
 #endif
 
-    pdata->buf_id = buf_id;
-
     return RT_EOK;
 }
 
@@ -154,7 +157,8 @@ static rt_err_t app_lv_show_message_design(void *param);
 design_cb_t lv_show_message_design_t = {.cb = app_lv_show_message_design,};
 static rt_err_t app_lv_show_message_design(void *param)
 {
-    struct app_message_main_data_t *pdata = g_message_main_data;
+    struct app_page_data_t *page = g_message_page;
+    struct app_msg_private *pdata = (struct app_msg_private *)page->private;
     struct app_main_data_t *maindata = app_main_data;
     struct image_st ips, ipd;
     uint32_t start_x, start_y;
@@ -222,18 +226,22 @@ static rt_err_t app_lv_show_message_design(void *param)
     rk_scale_process(&g_name.img[0], &ipd, TYPE_RGB565_565);
 
     pdata->offset = (MSG_ANIM_STEP - mov_index) * (MSG_BUF_OFFSET / MSG_ANIM_STEP);
-    clock_move_updn_refr_param.wflag = 0x01 << app_message_main_refrsh_param.win_id;
-    clock_move_updn_refr_param.wait = RT_WAITING_FOREVER;
-    app_refresh_request(&clock_move_updn_refr_param);
+
+    pdata->buf_id = buf_id;
+    page->fb = pdata->fb[buf_id] + pdata->offset * page->vir_w * (MSG_WIN_COLOR_DEPTH >> 3);
+
+    g_refr_param.page = g_message_page;
+    g_refr_param.page_num = 1;
+    app_refresh_request(&g_refr_param);
+
     mov_index--;
     if (mov_index < 0)
     {
         mov_index = MSG_ANIM_STEP;
         pdata->msg_cnt--;
         app_asr_start();
-        // app_main_touch_register(&app_message_main_touch_cb);
     }
-    else if (maindata->ver_page == VER_PAGE_BOTTOM)
+    else
     {
         app_design_request(0, &lv_show_message_design_t, RT_NULL);
     }
@@ -241,8 +249,6 @@ static rt_err_t app_lv_show_message_design(void *param)
     et = HAL_GetTick();
     rt_kprintf("design %p [%lu ms]\n", fb, et - st);
 #endif
-
-    pdata->buf_id = buf_id;
 
     return RT_EOK;
 }
@@ -260,13 +266,14 @@ rt_err_t app_message_anim_continue(void)
         return RT_EOK;
     }
 
-    return RT_ERROR;
+    return -RT_ERROR;
 }
 
 void app_message_page_exit(void)
 {
     struct app_main_data_t *maindata = app_main_data;
-    struct app_message_main_data_t *pdata = g_message_main_data;
+    struct app_page_data_t *page = g_message_page;
+    struct app_msg_private *pdata = (struct app_msg_private *)page->private;
 
     if (maindata->ver_page == VER_PAGE_NULL)
         return;
@@ -315,11 +322,66 @@ void app_message_page_exit(void)
     }
 
     pdata->offset = 0;
+    page->fb = pdata->fb[pdata->buf_id];
+}
+
+static void app_message_txt_design(void)
+{
+    struct app_page_data_t *page = g_message_page;
+    struct app_msg_private *pdata = (struct app_msg_private *)page->private;
+    clock_time_t *time = &app_main_data->tmr_data;
+    struct app_lvgl_label_design msg_content;
+    uint32_t start_x, start_y;
+    char *str;
+
+    g_name.txt = "Claire Dean";
+    g_name.ping_pong = 0;
+    g_name.font = &lv_font_montserrat_30;
+    g_name.align = LV_LABEL_ALIGN_CENTER;
+    g_name.fmt = RTGRAPHIC_PIXEL_FORMAT_RGB565;
+    g_name.img[0].width = FUNC_WIN_XRES;
+    g_name.img[0].height = lv_font_montserrat_30.line_height;
+    g_name.img[0].stride = FUNC_WIN_XRES * (MSG_WIN_COLOR_DEPTH >> 3);
+    if (g_name.img[0].pdata != NULL)
+    {
+        rt_free_psram(g_name.img[0].pdata);
+    }
+    g_name.img[0].pdata = rt_malloc_psram(g_name.img[0].stride * g_name.img[0].height);
+    RT_ASSERT(g_name.img[0].pdata != NULL);
+    app_lv_label_design(&g_name);
+
+    str = rt_malloc(1024);
+    RT_ASSERT(str != NULL);
+    rt_snprintf(str, 1024,
+                "%02d:%02d\n"
+                "Do you have time to "
+                "watch an IMAX movie "
+                "in one square city "
+                "this weekend? It's "
+                "near Bao'an center.%c",
+                time->hour, time->minute, '\0');
+
+    msg_content.txt = str;
+    msg_content.ping_pong = 1;
+    msg_content.font = &lv_font_montserrat_30;
+    msg_content.align = LV_LABEL_ALIGN_CENTER;
+    msg_content.fmt = RTGRAPHIC_PIXEL_FORMAT_RGB565;
+    msg_content.img[1].width = msg_content.img[0].width = MSG_WIN_FB_W - 20;
+    msg_content.img[1].height = msg_content.img[0].height = MSG_WIN_YRES;
+    msg_content.img[1].stride = msg_content.img[0].stride = MSG_WIN_FB_W * (MSG_WIN_COLOR_DEPTH >> 3);
+    start_x = ((MSG_WIN_XRES - LV_HOR_RES) / 2 + 10);
+    start_y = MSG_WIN_YRES;
+    msg_content.img[0].pdata = pdata->fb[0] + start_y * msg_content.img[0].stride + start_x * (MSG_WIN_COLOR_DEPTH >> 3);
+    msg_content.img[1].pdata = pdata->fb[1] + start_y * msg_content.img[1].stride + start_x * (MSG_WIN_COLOR_DEPTH >> 3);
+    app_lv_label_design(&msg_content);
+
+    rt_free(str);
 }
 
 rt_err_t app_message_page_new_message(void *param)
 {
-    struct app_message_main_data_t *pdata = g_message_main_data;
+    struct app_page_data_t *page = g_message_page;
+    struct app_msg_private *pdata = (struct app_msg_private *)page->private;
     pdata->buf_id = 0;
     scale_index = 0;
     app_asr_stop();
@@ -327,6 +389,8 @@ rt_err_t app_message_page_new_message(void *param)
     // pdata->msg_cnt++;
     pdata->msg_cnt = 1;
 
+    pdata->offset = 0;
+    page->fb = pdata->fb[pdata->buf_id];
     if (g_pre_tips.pdata != NULL)
     {
         rk_image_reset(&g_pre_tips, MSG_WIN_COLOR_DEPTH >> 3);
@@ -348,7 +412,9 @@ rt_err_t app_message_page_new_message(void *param)
     img_load_info.h = MSG_LOGO_SMALL_H;
     img_load_info.name = ICONS_PATH"/WhatsApp_64x64.dta";
     app_load_img(&img_load_info, pdata->minilogo_buf, MSG_LOGO_SMALL_W, MSG_LOGO_SMALL_H, 0, 2);
-    app_design_request(0, &lv_message_main_design_t, RT_NULL);
+
+    app_message_txt_design();
+
     app_design_request(0, &lv_new_message_design_t, RT_NULL);
 
     return RT_EOK;
@@ -357,7 +423,6 @@ rt_err_t app_message_page_new_message(void *param)
 rt_err_t app_message_page_show_message(void *param)
 {
     mov_index = MSG_ANIM_STEP;
-    // app_main_touch_unregister();
     app_design_request(0, &lv_show_message_design_t, RT_NULL);
 
     return RT_EOK;
@@ -366,10 +431,12 @@ rt_err_t app_message_page_show_message(void *param)
 static rt_err_t app_message_page_show_tips(void *param)
 {
     struct app_lvgl_label_design *design = (struct app_lvgl_label_design *)param;
-    struct app_message_main_data_t *msgdata = g_message_main_data;
+    struct app_page_data_t *page = g_message_page;
+    struct app_msg_private *pdata = (struct app_msg_private *)page->private;
     uint32_t start_x, start_y;
 
-    msgdata->offset = 0;
+    pdata->offset = 0;
+    page->fb = pdata->fb[pdata->buf_id];
     if (g_pre_area[0].pdata != NULL)
     {
         rk_image_reset(&g_pre_area[0], MSG_WIN_COLOR_DEPTH >> 3);
@@ -396,12 +463,12 @@ static rt_err_t app_message_page_show_tips(void *param)
     g_pre_tips.stride = MSG_WIN_FB_W * (MSG_WIN_COLOR_DEPTH >> 3);
     start_x = (MSG_WIN_XRES - g_pre_tips.width) / 2;
     start_y = (MSG_WIN_YRES - g_pre_tips.height) / 2;
-    g_pre_tips.pdata = msgdata->fb[msgdata->buf_id] + start_y * g_pre_tips.stride + start_x * (MSG_WIN_COLOR_DEPTH >> 3);
+    g_pre_tips.pdata = pdata->fb[pdata->buf_id] + start_y * g_pre_tips.stride + start_x * (MSG_WIN_COLOR_DEPTH >> 3);
     rk_image_copy(&design->img[0], &g_pre_tips, MSG_WIN_COLOR_DEPTH >> 3);
 
-    clock_move_updn_refr_param.wflag = 0x01 << app_message_main_refrsh_param.win_id;
-    clock_move_updn_refr_param.wait = RT_WAITING_FOREVER;
-    app_refresh_request(&clock_move_updn_refr_param);
+    g_refr_param.page = g_message_page;
+    g_refr_param.page_num = 1;
+    app_refresh_request(&g_refr_param);
 
     return RT_EOK;
 }
@@ -409,9 +476,10 @@ design_cb_t message_page_show_tips_t = {.cb = app_message_page_show_tips,};
 
 rt_err_t app_message_page_check_message(void *param)
 {
-    struct app_message_main_data_t *msgdata = g_message_main_data;
+    struct app_page_data_t *page = g_message_page;
+    struct app_msg_private *pdata = (struct app_msg_private *)page->private;
 
-    if (msgdata->msg_cnt == 0)
+    if (pdata->msg_cnt == 0)
     {
         if (g_no_message.img[0].pdata == NULL)
         {
@@ -436,55 +504,45 @@ rt_err_t app_message_page_check_message(void *param)
 
 static rt_err_t app_message_move_updn_design(void *param);
 design_cb_t message_move_updn_design = { .cb = app_message_move_updn_design, };
-static refrsh_request_param_t message_move_updn_refr_param;
-
 static rt_err_t app_message_move_updn_design(void *param)
 {
-    struct app_main_data_t *maindata = app_main_data;
-    struct app_message_main_data_t *pdata = g_message_main_data;
-    struct app_funclist_data_t *fdata = g_funclist_data;
+    struct app_page_data_t *page = g_message_page;
     mov_design_param *tar = (mov_design_param *)param;
 
-    pdata->mov_offset += TOUCH_MOVE_STEP * tar->dir;
-    if (((tar->dir > 0) && (pdata->mov_offset >= tar->offset)) ||
-            ((tar->dir < 0) && (pdata->mov_offset <= tar->offset)))
+    page->ver_offset += TOUCH_MOVE_STEP * tar->dir;
+    if ((tar->dir * page->ver_offset) >= (tar->dir * tar->offset))
     {
-        pdata->mov_dir = 0;
-
-        if (tar->offset == 0)
+        if (tar->offset != 0)
         {
             app_main_touch_unregister();
-            app_main_unregister_timeout_cb_if_is(app_message_page_show_message);
             app_main_touch_register(&main_page_touch_cb);
-            // app_main_timer_cb_register(app_main_page_clock_update);
-            if (main_page_timer_cb[app_main_page_data->cur_page].cb)
+            if (main_page_timer_cb[app_main_page->hor_page].cb)
             {
-                app_main_timer_cb_register(main_page_timer_cb[app_main_page_data->cur_page].cb);
+                app_main_timer_cb_register(main_page_timer_cb[app_main_page->hor_page].cb);
             }
             app_message_page_exit();
-            fdata->hor_start = 0;
-            fdata->hor_offset = 0;
-            message_move_updn_refr_param.wflag = 0x01 << main_page_refrsh_param.win_id;
+            g_refr_param.page = app_main_page;
+            g_refr_param.page_num = 1;
         }
         else
         {
-            message_move_updn_refr_param.wflag = (0x01 << main_page_refrsh_param.win_id) | (0x01 << app_message_main_refrsh_param.win_id);
-            if (maindata->ver_page == VER_PAGE_BOTTOM)
-                app_message_anim_continue();
+            app_message_anim_continue();
+            g_refr_param.page = page;
+            g_refr_param.page_num = 1;
         }
+        page->ver_offset = tar->offset;
 
-        pdata->mov_offset  = maindata->ver_page * MSG_WIN_YRES;
-
-        message_move_updn_refr_param.wait = RT_WAITING_FOREVER;
-        app_refresh_request(&message_move_updn_refr_param);
+        app_refresh_request(&g_refr_param);
     }
     else // continue move
     {
-        app_design_request(0, &message_move_updn_design, param);
+        page->next = app_main_page;
+        g_refr_param.page = page;
+        g_refr_param.page_num = 2;
+        g_refr_param.auto_resize = 1;
+        app_refresh_request(&g_refr_param);
 
-        message_move_updn_refr_param.wflag = (0x01 << main_page_refrsh_param.win_id) | (0x01 << app_message_main_refrsh_param.win_id);
-        message_move_updn_refr_param.wait = RT_WAITING_FOREVER;
-        app_refresh_request(&message_move_updn_refr_param);
+        app_design_request(0, &message_move_updn_design, param);
     }
 
     return RT_EOK;
@@ -493,31 +551,28 @@ static rt_err_t app_message_move_updn_design(void *param)
 static mov_design_param touch_moveup_design_param;
 rt_err_t app_message_touch_move_up(void *param)
 {
-    struct app_main_data_t *maindata = app_main_data;
     struct app_main_data_t *pdata = (struct app_main_data_t *)param;
     struct rt_touch_data *cur_p   = &pdata->cur_point[0];
     struct rt_touch_data *down_p   = &pdata->down_point[0];
 
     if (pdata->dir_mode == TOUCH_DIR_MODE_UPDN)
     {
-        if ((maindata->ver_page == VER_PAGE_TOP && (down_p->y_coordinate <= cur_p->y_coordinate)) ||
-                (maindata->ver_page == VER_PAGE_BOTTOM && (down_p->y_coordinate >= cur_p->y_coordinate)))
+        app_slide_refresh_undo();
+        if ((down_p->y_coordinate >= cur_p->y_coordinate))
         {
-            if (maindata->ver_page == VER_PAGE_BOTTOM)
-                app_message_anim_continue();
+            app_message_anim_continue();
             return RT_EOK;
         }
 
-        if ((maindata->ver_page == VER_PAGE_TOP && (down_p->y_coordinate - cur_p->y_coordinate) >= MSG_WIN_YRES / 6) ||
-                (maindata->ver_page == VER_PAGE_BOTTOM && (cur_p->y_coordinate - down_p->y_coordinate) >= MSG_WIN_YRES / 6))
+        if ((cur_p->y_coordinate - down_p->y_coordinate) >= MSG_WIN_YRES / 6)
         {
-            touch_moveup_design_param.dir = -maindata->ver_page;
-            touch_moveup_design_param.offset = 0;
+            touch_moveup_design_param.dir = -1;
+            touch_moveup_design_param.offset = MSG_WIN_YRES * touch_moveup_design_param.dir;
         }
         else
         {
-            touch_moveup_design_param.dir = maindata->ver_page;
-            touch_moveup_design_param.offset = MSG_WIN_YRES * touch_moveup_design_param.dir;
+            touch_moveup_design_param.dir = 1;
+            touch_moveup_design_param.offset = 0;
         }
         app_design_request(0, &message_move_updn_design, &touch_moveup_design_param);
     }
@@ -525,9 +580,35 @@ rt_err_t app_message_touch_move_up(void *param)
     return RT_EOK;
 }
 
+static void slide_updn_cb(int mov_fix)
+{
+    struct app_page_data_t *page = g_message_page;
+    page->ver_offset -= mov_fix;
+}
+
+rt_err_t app_message_touch_move_updn(void *param)
+{
+    struct app_main_data_t *pdata = (struct app_main_data_t *)param;
+    struct app_page_data_t *page = g_message_page;
+
+    if (pdata->yoffset < 0)
+        return RT_EOK;
+
+    page->ver_offset = -pdata->yoffset;
+
+    page->next = app_main_page;
+    g_refr_param.page = page;
+    g_refr_param.page_num = 2;
+    g_refr_param.auto_resize = 1;
+    g_refr_param.cb = slide_updn_cb;
+    app_slide_refresh(&g_refr_param);
+
+    return RT_EOK;
+}
+
 static rt_err_t app_message_touch_up(void *param)
 {
-    if (app_message_anim_continue() == RT_ERROR)
+    if (app_message_anim_continue() == -RT_ERROR)
     {
         app_message_page_check_message(param);
     }
@@ -537,7 +618,7 @@ static rt_err_t app_message_touch_up(void *param)
 
 static rt_err_t app_message_touch_down(void *param)
 {
-    // struct app_message_main_data_t *appdata = g_message_main_data;
+    app_main_unregister_timeout_cb_if_is(app_message_page_show_message);
 
     return RT_EOK;
 };
@@ -546,106 +627,47 @@ extern rt_err_t app_main_page_touch_move_updn(void *param);
 struct app_touch_cb_t app_message_main_touch_cb =
 {
     .tp_touch_down  = app_message_touch_down,
-    .tp_move_updn   = app_main_page_touch_move_updn,
+    .tp_move_updn   = app_message_touch_move_updn,
     .tp_move_up     = app_message_touch_move_up,
     .tp_touch_up    = app_message_touch_up,
 };
 
-/*
- **************************************************************************************************
- *
- * Declaration
- *
- **************************************************************************************************
- */
-/**
- * top layer refresh.
- */
-rt_err_t app_message_main_refresh(struct rt_display_config *wincfg, void *param)
-{
-    struct rt_device_graphic_info *info = &app_main_data->disp->info;
-    struct app_message_main_data_t *pdata = g_message_main_data;
-    struct app_funclist_data_t *fdata = g_funclist_data;
-    struct app_func_data_t *fcdata = g_func_data;
-    app_disp_refrsh_param_t *par = (app_disp_refrsh_param_t *)param;
-    rt_int16_t offset;
-
-    //RT_ASSERT(pdata->mov_offset > 0);
-    if (pdata->mov_offset == 0)
-        return RT_ERROR;
-    if (fcdata->hor_offset > MSG_WIN_XRES || fcdata->hor_offset <= 0)
-        return RT_ERROR;
-
-    if (pdata->mov_offset < -MSG_WIN_YRES)
-        pdata->mov_offset = -MSG_WIN_YRES;
-    if (pdata->mov_offset > MSG_WIN_YRES)
-        pdata->mov_offset = MSG_WIN_YRES;
-
-    offset = pdata->mov_offset;
-    if (offset < 0)
-    {
-        offset = -offset;
-        wincfg->fb    = pdata->fb[pdata->buf_id] + pdata->offset * MSG_WIN_FB_W * (MSG_WIN_COLOR_DEPTH >> 3);
-        wincfg->fblen = offset * (MSG_WIN_COLOR_DEPTH >> 3) * MSG_WIN_FB_W;
-        wincfg->y     = DISP_YRES - offset;
-        wincfg->format  = RTGRAPHIC_PIXEL_FORMAT_RGB565;
-        wincfg->xVir  = MSG_WIN_FB_W;
-        wincfg->w     = MSG_WIN_XRES;
-        wincfg->x     = MSG_REGION_X + ((info->width  - wincfg->w) / 2);
-    }
-    else
-    {
-        if (fdata->hor_offset < 0)
-            fdata->hor_offset = 0;
-        if (fdata->hor_offset > (FUNC_WIN_FB_W - FUNC_WIN_XRES))
-            fdata->hor_offset = FUNC_WIN_FB_W - FUNC_WIN_XRES;
-        wincfg->fb    = fdata->funclist_fb + ((MSG_WIN_XRES - fcdata->hor_offset) + fdata->hor_offset) * (FUNC_WIN_COLOR_DEPTH >> 3) + (MSG_WIN_YRES - offset) * FUNC_WIN_FB_W * (FUNC_WIN_COLOR_DEPTH >> 3);
-        wincfg->fblen = offset * (FUNC_WIN_COLOR_DEPTH >> 3) * FUNC_WIN_FB_W;
-        wincfg->y     = MSG_REGION_Y + (info->height - MSG_WIN_YRES) / 2;;
-        wincfg->format  = RTGRAPHIC_PIXEL_FORMAT_RGB565;
-        // wincfg->format  = RTGRAPHIC_PIXEL_FORMAT_RGB888;
-        wincfg->xVir  = FUNC_WIN_FB_W;
-        wincfg->w     = fcdata->hor_offset;
-        wincfg->x     = MSG_WIN_XRES - wincfg->w + (info->width - MSG_WIN_XRES) / 2;
-    }
-    wincfg->winId   = par->win_id;
-    wincfg->zpos    = par->win_layer;
-    wincfg->colorkey = 0;//COLOR_KEY_EN | 0x5555;
-    wincfg->alphaEn = 0;
-    wincfg->lut     = RT_NULL;
-    wincfg->lutsize = 0;
-    wincfg->h     = offset; /* MSG_WIN_YRES */
-    wincfg->ylast = wincfg->y;
-
-    // RT_ASSERT(((wincfg->w * MSG_WIN_COLOR_DEPTH) % 32) == 0);
-
-    RT_ASSERT((wincfg->x + wincfg->w) <= info->width);
-    RT_ASSERT((wincfg->y + wincfg->h) <= info->height);
-
-    return RT_EOK;
-}
-
 static rt_err_t app_message_main_init_design(void *param)
 {
-    struct app_message_main_data_t *pdata;
+    struct app_page_data_t *page;
+    struct app_msg_private *pdata;
 
-    g_message_main_data = pdata = (struct app_message_main_data_t *)rt_malloc(sizeof(struct app_message_main_data_t));
+    g_message_page = page = (struct app_page_data_t *)rt_malloc(sizeof(struct app_page_data_t));
+    RT_ASSERT(page != RT_NULL);
+    pdata = (struct app_msg_private *)rt_malloc(sizeof(struct app_msg_private));
     RT_ASSERT(pdata != RT_NULL);
-    rt_memset((void *)pdata, 0, sizeof(struct app_message_main_data_t));
+    rt_memset((void *)page, 0, sizeof(struct app_page_data_t));
+    rt_memset((void *)pdata, 0, sizeof(struct app_page_data_t));
 
-    /* framebuffer malloc */
-    // pdata->fblen = MSG_WIN_FB_W * MSG_WIN_FB_H * MSG_WIN_COLOR_DEPTH / 8;
-    pdata->fblen = MSG_WIN_XRES * MSG_WIN_YRES * 2 * MSG_WIN_COLOR_DEPTH / 8;
-    pdata->fb[0] = (rt_uint8_t *)rt_malloc_psram(pdata->fblen);
-    pdata->fb[1] = (rt_uint8_t *)rt_malloc_psram(pdata->fblen);
+    page->id = ID_NONE;
+    page->w = MSG_WIN_XRES;
+    page->h = MSG_WIN_YRES;
+    page->vir_w = MSG_WIN_FB_W;
+    page->exit_side = EXIT_SIDE_TOP;
+    page->win_id = APP_CLOCK_WIN_1;
+    page->win_layer = WIN_MIDDLE_LAYER;
+    page->format = RTGRAPHIC_PIXEL_FORMAT_RGB565;
+    page->fblen = MSG_WIN_FB_W * MSG_WIN_FB_H * MSG_WIN_COLOR_DEPTH / 8;
+    page->private = pdata;
+
+    page->fb = pdata->fb[0] = (rt_uint8_t *)rt_malloc_psram(page->fblen);
+    pdata->fb[1] = (rt_uint8_t *)rt_malloc_psram(page->fblen);
     RT_ASSERT(pdata->fb[0] != RT_NULL);
     RT_ASSERT(pdata->fb[1] != RT_NULL);
-    memset(pdata->fb[0], 0, pdata->fblen);
-    memset(pdata->fb[1], 0, pdata->fblen);
+    memset(pdata->fb[0], 0, page->fblen);
+    memset(pdata->fb[1], 0, page->fblen);
     pdata->buf_id = 0;
     pdata->msg_cnt = 0;
     memset(&g_name, 0x0, sizeof(struct app_lvgl_label_design));
     memset(&g_no_message, 0x0, sizeof(struct app_lvgl_label_design));
+
+    app_main_page->bottom = page;
+    page->top = app_main_page;
 
     return RT_EOK;
 }

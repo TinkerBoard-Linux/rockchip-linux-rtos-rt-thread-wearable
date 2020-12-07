@@ -28,7 +28,7 @@
  *
  **************************************************************************************************
  */
-struct app_page_data_t *g_func_page;
+struct app_page_data_t *g_setting_page;
 static page_refrsh_request_param_t g_refr_param;
 
 /*
@@ -38,11 +38,11 @@ static page_refrsh_request_param_t g_refr_param;
  *
  **************************************************************************************************
  */
-static rt_err_t app_func_move_updn_design(void *param);
-static design_cb_t setting_move_updn_design = { .cb = app_func_move_updn_design, };
-static rt_err_t app_func_move_updn_design(void *param)
+static rt_err_t app_setting_move_updn_design(void *param);
+static design_cb_t setting_move_updn_design = { .cb = app_setting_move_updn_design, };
+static rt_err_t app_setting_move_updn_design(void *param)
 {
-    struct app_page_data_t *page = g_func_page;
+    struct app_page_data_t *page = g_setting_page;
     mov_design_param *tar = (mov_design_param *)param;
 
     page->ver_offset += TOUCH_MOVE_STEP * tar->dir;
@@ -64,10 +64,10 @@ static rt_err_t app_func_move_updn_design(void *param)
     return RT_EOK;
 }
 
-static rt_err_t app_func_touch_move_updn(void *param)
+static rt_err_t app_setting_touch_move_updn(void *param)
 {
     struct app_main_data_t  *maindata = (struct app_main_data_t *)param;
-    struct app_page_data_t *page = g_func_page;
+    struct app_page_data_t *page = g_setting_page;
 
     page->ver_offset = page->ver_page * page->ver_step - maindata->yoffset;
 
@@ -82,12 +82,12 @@ static rt_err_t app_func_touch_move_updn(void *param)
 //---------------------------------------------------------------------------------
 // touch move lr
 //---------------------------------------------------------------------------------
-static rt_err_t app_func_move_lr_design(void *param);
-static design_cb_t setting_move_lr_design = { .cb = app_func_move_lr_design, };
-static rt_err_t app_func_move_lr_design(void *param)
+static rt_err_t app_setting_move_lr_design(void *param);
+static design_cb_t setting_move_lr_design = { .cb = app_setting_move_lr_design, };
+static rt_err_t app_setting_move_lr_design(void *param)
 {
-    struct app_page_data_t *page = g_func_page;
-    struct app_func_private *pdata = page->private;
+    struct app_page_data_t *page = g_setting_page;
+    struct app_setting_private *pdata = page->private;
     mov_design_param *tar = (mov_design_param *)param;
 
     page->hor_offset += TOUCH_MOVE_STEP * tar->dir;
@@ -97,28 +97,23 @@ static rt_err_t app_func_move_lr_design(void *param)
         page->hor_offset = tar->offset;
         if (page->hor_offset)
         {
-            g_funclist_page->win_layer = WIN_MIDDLE_LAYER;
-            if (pdata->alpha_win)
-            {
-                app_alpha_win_hide();
-            }
-            app_func_exit(pdata->func_id);
+            app_setting_exit(pdata->setting_id);
             app_main_touch_unregister();
-            app_main_touch_register(&app_funclist_main_touch_cb);
-            g_refr_param.page = g_funclist_page;
+            app_main_touch_register(&app_func_main_touch_cb);
+            g_refr_param.page = g_func_page;
             g_refr_param.page_num = 1;
         }
         else
         {
             g_refr_param.page = page;
-            g_refr_param.page_num = 1; // + pdata->alpha_win;
+            g_refr_param.page_num = 1;
         }
     }
     else
     {
-        page->next = g_funclist_page;
+        page->next = g_func_page;
         g_refr_param.page = page;
-        g_refr_param.page_num = 2; // + pdata->alpha_win;
+        g_refr_param.page_num = 2;
         g_refr_param.auto_resize = 1;
         app_design_request(0, &setting_move_lr_design, param);
     }
@@ -128,10 +123,10 @@ static rt_err_t app_func_move_lr_design(void *param)
     return RT_EOK;
 }
 
-static rt_err_t app_func_touch_move_lr(void *param)
+static rt_err_t app_setting_touch_move_lr(void *param)
 {
     struct app_main_data_t  *pdata = (struct app_main_data_t *)param;
-    struct app_page_data_t *page = g_func_page;
+    struct app_page_data_t *page = g_setting_page;
 
     page->hor_offset = -pdata->xoffset;
     if (page->hor_offset > page->vir_w)
@@ -139,7 +134,7 @@ static rt_err_t app_func_touch_move_lr(void *param)
     if (page->hor_offset < 0)
         page->hor_offset = 0;
 
-    page->next = g_funclist_page;
+    page->next = g_func_page;
     g_refr_param.page = page;
     g_refr_param.page_num = 2;
     g_refr_param.auto_resize = 1;
@@ -153,10 +148,10 @@ static rt_err_t app_func_touch_move_lr(void *param)
 // touch move up
 //---------------------------------------------------------------------------------
 static mov_design_param touch_moveup_design_param;
-rt_err_t app_func_touch_move_up(void *param)
+rt_err_t app_setting_touch_move_up(void *param)
 {
     struct app_main_data_t *maindata = (struct app_main_data_t *)param;
-    struct app_page_data_t *page = g_func_page;
+    struct app_page_data_t *page = g_setting_page;
     struct rt_touch_data *cur_p   = &maindata->cur_point[0];
     struct rt_touch_data *down_p   = &maindata->down_point[0];
     int16_t floor_ofs, ceil_ofs;
@@ -203,60 +198,12 @@ rt_err_t app_func_touch_move_up(void *param)
     return RT_EOK;
 }
 
-struct app_touch_cb_t app_func_main_touch_cb =
+struct app_touch_cb_t app_setting_main_touch_cb =
 {
-    .tp_move_updn   = app_func_touch_move_updn,
-    .tp_move_lr     = app_func_touch_move_lr,
-    .tp_move_up     = app_func_touch_move_up,
+    .tp_move_updn   = app_setting_touch_move_updn,
+    .tp_move_lr     = app_setting_touch_move_lr,
+    .tp_move_up     = app_setting_touch_move_up,
 };
-
-void app_func_merge_touch_ops(struct app_touch_cb_t *ops)
-{
-    if (ops->tp_touch_down)
-        app_func_main_touch_cb.tp_touch_down = ops->tp_touch_down;
-
-    if (ops->tp_move_lr_start)
-        app_func_main_touch_cb.tp_move_lr_start = ops->tp_move_lr_start;
-
-    if (ops->tp_move_updn_start)
-        app_func_main_touch_cb.tp_move_updn_start = ops->tp_move_updn_start;
-
-    if (ops->tp_move_lr)
-        app_func_main_touch_cb.tp_move_lr = ops->tp_move_lr;
-
-    if (ops->tp_move_updn)
-        app_func_main_touch_cb.tp_move_updn = ops->tp_move_updn;
-
-    if (ops->tp_move_up)
-        app_func_main_touch_cb.tp_move_up = ops->tp_move_up;
-
-    if (ops->tp_touch_up)
-        app_func_main_touch_cb.tp_touch_up = ops->tp_touch_up;
-}
-
-void app_func_revert_touch_ops(struct app_touch_cb_t *ops)
-{
-    if (ops->tp_touch_down && (app_func_main_touch_cb.tp_touch_down == ops->tp_touch_down))
-        app_func_main_touch_cb.tp_touch_down = NULL;
-
-    if (ops->tp_move_lr_start && (app_func_main_touch_cb.tp_move_lr_start == ops->tp_move_lr_start))
-        app_func_main_touch_cb.tp_move_lr_start = NULL;
-
-    if (ops->tp_move_updn_start && (app_func_main_touch_cb.tp_move_updn_start == ops->tp_move_updn_start))
-        app_func_main_touch_cb.tp_move_updn_start = NULL;
-
-    if (ops->tp_move_lr && (app_func_main_touch_cb.tp_move_lr == ops->tp_move_lr))
-        app_func_main_touch_cb.tp_move_lr = NULL;
-
-    if (ops->tp_move_updn && (app_func_main_touch_cb.tp_move_updn == ops->tp_move_updn))
-        app_func_main_touch_cb.tp_move_updn = NULL;
-
-    if (ops->tp_move_up && (app_func_main_touch_cb.tp_move_up == ops->tp_move_up))
-        app_func_main_touch_cb.tp_move_up = NULL;
-
-    if (ops->tp_touch_up && (app_func_main_touch_cb.tp_touch_up == ops->tp_touch_up))
-        app_func_main_touch_cb.tp_touch_up = NULL;
-}
 
 /*
  **************************************************************************************************
@@ -265,37 +212,29 @@ void app_func_revert_touch_ops(struct app_touch_cb_t *ops)
  *
  **************************************************************************************************
  */
-void app_func_show(void *param)
+void app_setting_show(void *param)
 {
-    struct app_page_data_t *page = g_func_page;
-    struct app_func_private *pdata = page->private;
+    struct app_page_data_t *page = g_setting_page;
 
     app_main_timer_cb_unregister();
     app_main_touch_unregister();
-    app_main_touch_register(&app_func_main_touch_cb);
-
-    g_funclist_page->win_layer = WIN_BOTTOM_LAYER;
-    if (pdata->alpha_win)
-    {
-        app_alpha_win_show();
-    }
+    app_main_touch_register(&app_setting_main_touch_cb);
 
     g_refr_param.page = page;
     g_refr_param.page_num = 1;
     app_refresh_request(&g_refr_param);
 }
 
-void app_func_common_exit(void)
+void app_setting_common_exit(void)
 {
-    struct app_page_data_t *page = g_func_page;
+    struct app_page_data_t *page = g_setting_page;
 
     rt_free_psram(page->fb);
 }
 
-void app_func_common_init(void *param)
+void app_setting_common_init(void *param)
 {
-    struct app_page_data_t *page = g_func_page;
-    struct app_func_private *pdata = page->private;
+    struct app_page_data_t *page = g_setting_page;
     struct app_lvgl_label_design title;
 
     /* framebuffer malloc */
@@ -304,7 +243,6 @@ void app_func_common_init(void *param)
     RT_ASSERT(page->fb != NULL);
     rt_memset((void *)page->fb, 0x0, page->fblen);
 
-    pdata->alpha_win = 0;
     page->w = MENU_WIN_XRES;
     page->h = MENU_WIN_YRES;
     page->vir_w = MENU_WIN_XRES;
@@ -321,40 +259,37 @@ void app_func_common_init(void *param)
     title.img[0].stride = MENU_WIN_FB_W * (MENU_WIN_COLOR_DEPTH >> 3);
     title.img[0].pdata = page->fb + (MENU_WIN_YRES - title.img[0].height) / 2 * MENU_WIN_XRES * (MENU_WIN_COLOR_DEPTH >> 3);
     app_lv_label_design(&title);
-
-    app_func_set_preview(APP_FUNC_COMMON, page->fb);
 }
 
-static rt_err_t app_func_init_design(void *param)
+static rt_err_t app_setting_init_design(void *param)
 {
     struct app_page_data_t *page;
-    struct app_func_private *pdata;
+    struct app_setting_private *pdata;
 
-    g_func_page = page = (struct app_page_data_t *)rt_malloc(sizeof(struct app_page_data_t));
+    g_setting_page = page = (struct app_page_data_t *)rt_malloc(sizeof(struct app_page_data_t));
     RT_ASSERT(page != RT_NULL);
     rt_memset((void *)page, 0, sizeof(struct app_page_data_t));
 
-    pdata = (struct app_func_private *)rt_malloc(sizeof(struct app_func_private));
+    pdata = (struct app_setting_private *)rt_malloc(sizeof(struct app_setting_private));
     RT_ASSERT(pdata != RT_NULL);
-    rt_memset((void *)pdata, 0, sizeof(struct app_func_private));
+    rt_memset((void *)pdata, 0, sizeof(struct app_setting_private));
 
     page->id = ID_NONE;
-    page->win_id = APP_CLOCK_WIN_0;
-    page->win_layer = WIN_MIDDLE_LAYER;
+    page->win_id = APP_CLOCK_WIN_1;
+    page->win_layer = WIN_TOP_LAYER;
     page->format = RTGRAPHIC_PIXEL_FORMAT_RGB565;
     page->private = pdata;
     page->exit_side = EXIT_SIDE_RIGHT;
 
-    app_func_set(APP_FUNC_EXERCISE, func_motion_init, NULL, func_motion_enter, NULL, func_motion_exit, NULL);
-    app_func_set(APP_FUNC_SETTING, app_func_setting_init, NULL, app_func_setting_enter, NULL, app_func_setting_exit, NULL);
-    app_func_set(APP_FUNC_COMMON, app_func_common_init, NULL, app_func_show, NULL, app_func_common_exit, NULL);
-    app_func_set(APP_FUNC_HEARTRATE, func_heartrate_init, NULL, func_heartrate_enter, NULL, func_heartrate_exit, NULL);
+    app_setting_set(APP_SETTING_COMMON, app_setting_common_init, NULL, app_setting_show, NULL, app_setting_common_exit);
+    app_setting_set(APP_SETTING_BACKLIGHT, func_backlight_init, NULL, func_backlight_enter, NULL, func_backlight_exit);
+    app_setting_set(APP_SETTING_TIME, func_time_set_init, NULL, func_time_set_enter, NULL, func_time_set_exit);
 
     return RT_EOK;
 }
-static design_cb_t  app_func_init_design_t = {.cb = app_func_init_design,};
+static design_cb_t  app_setting_init_design_t = {.cb = app_setting_init_design,};
 
-void app_func_memory_init(void)
+void app_setting_memory_init(void)
 {
-    app_design_request(0, &app_func_init_design_t, RT_NULL);
+    app_design_request(0, &app_setting_init_design_t, RT_NULL);
 }

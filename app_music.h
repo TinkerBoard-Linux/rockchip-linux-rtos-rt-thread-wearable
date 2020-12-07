@@ -16,7 +16,7 @@
  **************************************************************************************************
  */
 
-rt_err_t app_music_init(void);
+rt_err_t app_music_init(void *param);
 rt_err_t app_music_design(void *param);
 void app_music_name_design(char *name);
 void app_music_design_update(void);

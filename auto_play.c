@@ -21,6 +21,8 @@
 
 #include "app_main.h"
 
+#ifdef APP_AUTO_PLAY
+
 struct auto_play_s
 {
     rt_sem_t sem;
@@ -207,3 +209,4 @@ rt_err_t auto_play_init(void *arg)
 
     return RT_EOK;
 }
+#endif

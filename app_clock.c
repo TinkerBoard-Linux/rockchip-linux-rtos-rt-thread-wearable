@@ -73,6 +73,8 @@ static const img_load_info_t img_clk_bkg[CLOCK_STYLE_MAX_NUM] =
     { DISP_XRES, DISP_YRES, USERDATA_PATH"img_clk2_bkg.dta"},
 };
 
+static struct image_st target;
+
 /*
  **************************************************************************************************
  *
@@ -141,11 +143,13 @@ static const struct clock_needle_grp_t needle_img[CLOCK_STYLE_MAX_NUM] =
 struct pre_info
 {
     short info[DISP_YRES][2];
+    uint8_t hour;
     uint8_t min;
     uint8_t style;
 };
 struct pre_info preInfo = {{{0}, {0}}, 0xff, 0xff};
 static struct rotateimage_st pbg;
+static uint8_t *bg_buf = NULL;
 #endif
 
 /*
@@ -155,11 +159,14 @@ static struct rotateimage_st pbg;
  */
 static rt_err_t app_analog_clock_style_design(void *param)
 {
-    main_page_design_param_t *par = (main_page_design_param_t *)param;
+    struct image_st *par = (struct image_st *)&target;
+    rt_uint8_t  *fb   = par->pdata;
+#if !CLOCK_FAST_RGB565
+    rt_uint32_t vir_w = par->stride / format2depth[par->format];
+#endif
     clock_time_t *time    = &app_main_data->tmr_data;
-    rt_uint8_t   *fb      = app_main_page_data->top_fb;
     rt_int8_t    style_id = app_main_data->clock_style;
-    rt_uint16_t  xstart   = (rt_uint16_t)(par->buf_id) * CLOCK_WIN_XRES;
+    rt_uint16_t  xstart   = 0;
     int32_t hour;
     int32_t angle;
 
@@ -177,11 +184,12 @@ static rt_err_t app_analog_clock_style_design(void *param)
 #endif
 
 #ifndef NEW_ROTATE_ALGORITHM
-    app_load_img((img_load_info_t *)&img_clk_bkg[style_id], (rt_uint8_t *)fb, CLOCK_WIN_FB_W, CLOCK_WIN_FB_H, xstart, 2);
+    app_load_img((img_load_info_t *)&img_clk_bkg[style_id], (rt_uint8_t *)fb,
+                 vir_w, par->height, xstart, format2depth[par->format]);
 
     //draw clock needles
-    rt_uint16_t xoffset = (CLOCK_WIN_XRES / 2) + xstart;
-    rt_uint16_t yoffset = (CLOCK_WIN_YRES / 2);
+    rt_uint16_t xoffset = (par->width / 2) + xstart;
+    rt_uint16_t yoffset = (par->width / 2);
 
     //draw hour line
     hour = time->hour;
@@ -189,27 +197,27 @@ static rt_err_t app_analog_clock_style_design(void *param)
     angle = hour * (360 / 12) + (time->minute * 30) / 60 - 90;
     if (angle < 0) angle += 360;
     rt_display_rotate_16bit((float)angle, img_hour->w, img_hour->h, (unsigned short *)img_hour->data,
-                            (unsigned short *)((uint32_t)fb + 2 * (yoffset * CLOCK_WIN_FB_W + xoffset)),
-                            CLOCK_WIN_FB_W, 0, img_hour->h / 2);
+                            (unsigned short *)((uint32_t)fb + format2depth[par->format] * (yoffset * vir_w + xoffset)),
+                            vir_w, 0, img_hour->h / 2);
 
     //draw min line
     angle = time->minute * (360 / 60) - 90;
     if (angle < 0) angle += 360;
     rt_display_rotate_16bit((float)angle, img_min->w, img_min->h, (unsigned short *)img_min->data,
-                            (unsigned short *)((uint32_t)fb + 2 * (yoffset * CLOCK_WIN_FB_W + xoffset)),
-                            CLOCK_WIN_FB_W, 0, img_min->h / 2);
+                            (unsigned short *)((uint32_t)fb + format2depth[par->format] * (yoffset * vir_w + xoffset)),
+                            vir_w, 0, img_min->h / 2);
 
     //draw second line
     angle  = time->second * (360 / 60) - 90;
     if (angle < 0) angle += 360;
     rt_display_rotate_16bit((float)angle, img_sec->w, img_sec->h, (unsigned short *)img_sec->data,
-                            (unsigned short *)((uint32_t)fb + 2 * (yoffset * CLOCK_WIN_FB_W + xoffset)),
-                            CLOCK_WIN_FB_W, 0, img_sec->h / 2);
+                            (unsigned short *)((uint32_t)fb + format2depth[par->format] * (yoffset * vir_w + xoffset)),
+                            vir_w, 0, img_sec->h / 2);
 
     //draw centre
     yoffset  -= img_cen->h / 2;
     xoffset  -= img_cen->w / 2;
-    rt_display_img_fill(img_cen, fb, CLOCK_WIN_FB_W, xoffset, yoffset);
+    rt_display_img_fill(img_cen, fb, vir_w, xoffset, yoffset);
 #else
     struct rotateimage_st ps, pd;
     float h_cx = needle_img[style_id].hour.cx;
@@ -219,15 +227,15 @@ static rt_err_t app_analog_clock_style_design(void *param)
     float s_cx = needle_img[style_id].sec.cx;
     float s_cy = needle_img[style_id].sec.cy;
 
-    pd.width = CLOCK_WIN_XRES;
-    pd.height = CLOCK_WIN_YRES;
-    pd.stride = CLOCK_WIN_FB_W * (CLOCK_WIN_COLOR_DEPTH >> 3);
+    pd.width = par->width;
+    pd.height = par->height;
+    pd.stride = par->stride;
     pd.cx = pd.width / 2;
     pd.cy = pd.height / 2;
-    pd.pdata = fb + xstart * 2;
+    pd.pdata = fb + xstart * format2depth[par->format];
 
 #if !CLOCK_FAST_RGB565
-    app_load_img((img_load_info_t *)&img_clk_bkg[style_id], (rt_uint8_t *)fb, CLOCK_WIN_FB_W, CLOCK_WIN_FB_H, xstart, 2);
+    app_load_img((img_load_info_t *)&img_clk_bkg[style_id], (rt_uint8_t *)fb, vir_w, par->height, xstart, format2depth[par->format]);
 
     ps.width = img_hour->w;
     ps.height = img_hour->h;
@@ -262,15 +270,16 @@ static rt_err_t app_analog_clock_style_design(void *param)
     }
     rk_rotate_process_16bit(&ps, &pd, (360 - angle % 360));
 #else
-    pbg.pdata = app_main_page_data->bottom_fb;
-    if (preInfo.min != time->minute || preInfo.style != style_id)
+    pbg.pdata = bg_buf;
+    if (preInfo.hour != time->hour || preInfo.min != time->minute || preInfo.style != style_id)
     {
+        preInfo.hour = time->hour;
         preInfo.min = time->minute;
         preInfo.style = style_id;
-        memset(preInfo.info[0], 0, DISP_YRES * 2 * sizeof(short));
-        pbg.width = CLOCK_WIN_XRES;
-        pbg.height = CLOCK_WIN_YRES;
-        pbg.stride = CLOCK_WIN_XRES * (CLOCK_WIN_COLOR_DEPTH >> 3);
+        memset(preInfo.info[0], 0, par->height * 2 * sizeof(short));
+        pbg.width = par->width;
+        pbg.height = par->height;
+        pbg.stride = par->width * format2depth[par->format];
         pbg.cx = pbg.width / 2;
         pbg.cy = pbg.height / 2;
 
@@ -281,8 +290,13 @@ static rt_err_t app_analog_clock_style_design(void *param)
         ps.cy = h_cy;
         ps.pdata = img_hour->data;
 
+        if (pbg.pdata == NULL)
+        {
+            bg_buf = pbg.pdata = rt_malloc_psram(par->stride * par->height);
+            RT_ASSERT(bg_buf != NULL);
+        }
         app_load_img((img_load_info_t *)&img_clk_bkg[style_id], (rt_uint8_t *)pbg.pdata,
-                     CLOCK_WIN_XRES, CLOCK_WIN_YRES, 0, CLOCK_WIN_COLOR_DEPTH >> 3);
+                     par->width, par->height, 0, format2depth[par->format]);
         hour = time->hour;
         if (hour >= 12)
         {
@@ -310,7 +324,7 @@ static rt_err_t app_analog_clock_style_design(void *param)
         rk_rotate_process_16bit(&ps, &pbg, (360 - angle % 360));
         for (int i = 0; i < pd.height; i++)
             memcpy(pd.pdata + i * pd.stride, pbg.pdata + i * pbg.stride,
-                   pbg.width * (CLOCK_WIN_COLOR_DEPTH >> 3));
+                   pbg.width * format2depth[par->format]);
     }
 #endif
     ps.width = img_sec->w;
@@ -437,11 +451,12 @@ static rt_err_t app_digital_clock_style0_init(void)
 
 static rt_err_t app_digital_clock_style0_design(void *param)
 {
-    main_page_design_param_t *par = (main_page_design_param_t *)param;
+    struct image_st *par = (struct image_st *)&target;
+    rt_uint8_t  *fb   = par->pdata;
+    rt_uint32_t vir_w = par->stride / format2depth[par->format];
     clock_time_t *time    = &app_main_data->tmr_data;
-    rt_uint8_t   *fb      = app_main_page_data->top_fb;
     //rt_int8_t    style_id = app_main_data->clock_style;
-    rt_uint16_t  startx, deltax, xoffset  = (rt_uint16_t)(par->buf_id) * CLOCK_WIN_XRES;
+    rt_uint16_t  startx, deltax, xoffset  = 0;
     rt_uint16_t  starty, deltay, yoffset  = 0;
     image_info_t *img_info = NULL;
 
@@ -450,35 +465,35 @@ static rt_err_t app_digital_clock_style0_design(void *param)
 
     //backup
     img_info = &watch_bg;
-    rt_display_img_fill(img_info, fb, CLOCK_WIN_FB_W, xoffset + 0, yoffset + 0);
+    rt_display_img_fill(img_info, fb, vir_w, xoffset + 0, yoffset + 0);
 
     //hour
     deltax   = 0;
     img_info = &watch_num_l_num_info[time->hour / 10];
     deltay    = (watch_bg.h - img_info->h) / 2;
-    rt_display_img_fill(img_info, fb, CLOCK_WIN_FB_W, xoffset + startx + deltax, yoffset + starty + deltay);
+    rt_display_img_fill(img_info, fb, vir_w, xoffset + startx + deltax, yoffset + starty + deltay);
 
     deltax   += img_info->w;
     img_info  = &watch_num_l_num_info[time->hour % 10];
     deltay    = (watch_bg.h - img_info->h) / 2;
-    rt_display_img_fill(img_info, fb, CLOCK_WIN_FB_W, xoffset + startx + deltax, yoffset + starty + deltay);
+    rt_display_img_fill(img_info, fb, vir_w, xoffset + startx + deltax, yoffset + starty + deltay);
 
     //dot
     deltax   += img_info->w;
     img_info = &watch_num_dot;
     deltay    = (watch_bg.h - img_info->h) / 2;
-    rt_display_img_fill(img_info, fb, CLOCK_WIN_FB_W, xoffset + startx + deltax, yoffset + starty + deltay);
+    rt_display_img_fill(img_info, fb, vir_w, xoffset + startx + deltax, yoffset + starty + deltay);
 
     //min
     deltax   += img_info->w;
     img_info = &watch_num_s_num_info[time->minute / 10];
     deltay    = (watch_bg.h - img_info->h) / 2;
-    rt_display_img_fill(img_info, fb, CLOCK_WIN_FB_W, xoffset + startx + deltax, yoffset + starty + deltay);
+    rt_display_img_fill(img_info, fb, vir_w, xoffset + startx + deltax, yoffset + starty + deltay);
 
     deltax   += img_info->w;
     img_info = &watch_num_s_num_info[time->minute % 10];
     deltay    = (watch_bg.h - img_info->h) / 2;
-    rt_display_img_fill(img_info, fb, CLOCK_WIN_FB_W, xoffset + startx + deltax, yoffset + starty + deltay);
+    rt_display_img_fill(img_info, fb, vir_w, xoffset + startx + deltax, yoffset + starty + deltay);
 
     return RT_EOK;
 }
@@ -490,10 +505,16 @@ static rt_err_t app_digital_clock_style0_design(void *param)
  *
  **************************************************************************************************
  */
-rt_err_t app_clock_init(void)
+rt_err_t app_clock_init(void *param)
 {
+    struct image_st *par;
     rt_err_t ret = RT_EOK;
 
+    if (param)
+    {
+        par = (struct image_st *)param;
+        target = *par;
+    }
     RT_ASSERT(app_main_data->clock_style < CLOCK_STYLE_MAX_NUM);
 
     if (clock_init_func[app_main_data->clock_style].cb && (clock_init_func[app_main_data->clock_style].inited == 0))

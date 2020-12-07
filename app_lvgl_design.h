@@ -63,7 +63,6 @@ struct app_lvgl_iconlist_design
  */
 extern design_cb_t lv_lvgl_label_design_t;
 extern design_cb_t lv_lvgl_iconarray_design_t;
-extern design_cb_t lv_message_main_design_t;
 
 void app_lvgl_init(void);
 int app_lvgl_init_check(void);

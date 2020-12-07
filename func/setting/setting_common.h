@@ -4,8 +4,8 @@
   * SPDX-License-Identifier: Apache-2.0
   */
 
-#ifndef __APP_FUNCLIST__
-#define __APP_FUNCLIST__
+#ifndef __SETTING_COMMON_H__
+#define __SETTING_COMMON_H__
 #include <rtthread.h>
 
 #if defined(RT_USING_TOUCH_DRIVERS)
@@ -29,7 +29,12 @@
  **************************************************************************************************
  */
 
-extern app_disp_refrsh_param_t app_funclist_refrsh_param;
+struct app_setting_private
+{
+    rt_int8_t   setting_id;
+};
+extern struct app_page_data_t *g_setting_page;
+extern struct app_touch_cb_t app_setting_main_touch_cb;
 
 /*
  **************************************************************************************************
@@ -39,23 +44,7 @@ extern app_disp_refrsh_param_t app_funclist_refrsh_param;
  **************************************************************************************************
  */
 
-struct app_funclist_private
-{
-    uint8_t  *fb;
-    uint32_t anim_fblen;
-    uint8_t  *anim_fb[2];
-    uint8_t  buf_id;
-    struct rt_touch_data point[1];
-    int pos_x;
-    int pos_y;
-    rt_uint32_t img_buflen;
-    rt_uint8_t *img_buf;
-};
-extern struct app_page_data_t *g_funclist_page;
-extern struct app_touch_cb_t app_funclist_main_touch_cb;
-
-void app_funclist_init(void);
-rt_err_t app_funclist_page_show_funclist(void *param);
-rt_err_t app_funclist_refresh(struct rt_display_config *wincfg, void *param);
+void app_setting_memory_init(void);
+void app_setting_show(void *param);
 
 #endif

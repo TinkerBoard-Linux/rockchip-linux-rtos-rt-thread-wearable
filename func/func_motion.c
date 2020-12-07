@@ -33,24 +33,25 @@ static image_info_t list_info[3];
 
 void func_motion_init(void *param)
 {
-    struct app_func_data_t *pdata = g_func_data;
+    struct app_page_data_t *page = g_func_page;
+    struct app_func_private *pdata = page->private;
     rt_uint16_t i;
     img_load_info_t img_load_info;
     char img_name[64];
     image_info_t *img_info = NULL;
 
-    app_func_refrsh_param.win_id    = APP_CLOCK_WIN_2;
-    app_func_refrsh_param.win_layer = WIN_TOP_LAYER;
-
-    pdata->max_w = MOTION_WIN_FB_W;
-    pdata->max_h = MOTION_WIN_FB_H;
     pdata->alpha_win = 0;
+    page->w = MOTION_WIN_FB_W;
+    page->h = MOTION_WIN_FB_H;
+    page->vir_w = MOTION_WIN_FB_W;
+    page->ver_offset = 0;
+    page->hor_offset = 0;
 
     /* framebuffer malloc */
-    pdata->fblen = MOTION_WIN_FB_W * MOTION_WIN_FB_H * MOTION_WIN_COLOR_DEPTH >> 3;
-    pdata->fb   = (rt_uint8_t *)rt_malloc_large(pdata->fblen);
-    RT_ASSERT(pdata->fb != RT_NULL);
-    rt_memset(pdata->fb, 0, pdata->fblen);
+    page->fblen = MOTION_WIN_FB_W * MOTION_WIN_FB_H * MOTION_WIN_COLOR_DEPTH >> 3;
+    page->fb   = (rt_uint8_t *)rt_malloc_large(page->fblen);
+    RT_ASSERT(page->fb != RT_NULL);
+    rt_memset(page->fb, 0, page->fblen);
 
     //load info
     for (i = 0; i < 3; i++)
@@ -165,7 +166,7 @@ void func_motion_init(void *param)
         pd.width  = MOTION_WIN_XRES;
         pd.height = MOTION_WIN_YRES;
         pd.stride = MOTION_WIN_XRES * (MOTION_WIN_COLOR_DEPTH >> 3);
-        pd.pdata = pdata->fb;
+        pd.pdata = page->fb;
 
         rk_image_copy(&ps, &pd, LV_COLOR_DEPTH >> 3);
 
@@ -176,7 +177,7 @@ void func_motion_init(void *param)
             startx = MOTION_ICONS_X;
             starty = 155 + i * 50;
             img_info = &list_info[i];
-            rt_display_img_fill(img_info, pdata->fb, MOTION_WIN_FB_W, startx, starty);
+            rt_display_img_fill(img_info, page->fb, MOTION_WIN_FB_W, startx, starty);
         }
     }
     else
@@ -201,13 +202,13 @@ void func_motion_init(void *param)
 
     lv_obj_del(obj_main);
 
-    app_func_set_preview(APP_FUNC_EXERCISE, pdata->fb);
+    app_func_set_preview(APP_FUNC_EXERCISE, page->fb);
 }
 
 void func_motion_exit(void)
 {
-    struct app_func_data_t *pdata = g_func_data;
-    rt_free_large(pdata->fb);
+    struct app_page_data_t *page = g_func_page;
+    rt_free_large(page->fb);
 
     for (rt_uint16_t i = 0; i < 3; i++)
     {

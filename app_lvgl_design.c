@@ -67,7 +67,7 @@ rt_err_t lv_clock_img_file_load(lv_img_dsc_t *img_dsc, const char *file)
     if (res != LV_RES_OK)
     {
         rt_kprintf("%s open failed\n", file);
-        return RT_ERROR;
+        return -RT_ERROR;
     }
 
     uint8_t px_size = lv_img_cf_get_px_size(info.cf);
@@ -197,7 +197,7 @@ rt_err_t app_lv_iconarray_design(void *param)
 
     for (int i = 0; i < icons_num; i++)
     {
-        if (lv_clock_img_file_load(&icon_img, design->path[i]) == RT_ERROR)
+        if (lv_clock_img_file_load(&icon_img, design->path[i]) == -RT_ERROR)
             continue;
 
         ps.width  = FUNC_ICON_W;
@@ -281,7 +281,7 @@ rt_err_t app_lv_iconlist_design(void *param)
     {
         if (design->path[i] != NULL)
         {
-            if (lv_clock_img_file_load(&icon_img[i], design->path[i]) == RT_ERROR)
+            if (lv_clock_img_file_load(&icon_img[i], design->path[i]) == -RT_ERROR)
                 continue;
             img_dsc = &icon_img[i];
         }
@@ -341,7 +341,7 @@ rt_err_t app_lv_label_design(void *param)
             obj_main == NULL)
     {
         rt_kprintf("%s error\n", __func__);
-        return RT_ERROR;
+        return -RT_ERROR;
     }
 
     design->img[0].width = MIN(design->img[0].width, LV_FB_W);
@@ -426,62 +426,6 @@ rt_err_t app_lv_label_design(void *param)
     return RT_EOK;
 }
 design_cb_t lv_lvgl_label_design_t = {.cb = app_lv_label_design,};
-
-static rt_err_t app_lv_message_main_design(void *param)
-{
-    struct app_main_data_t *pdata = app_main_data;
-    struct app_message_main_data_t *msgdata = g_message_main_data;
-    clock_time_t *time = &pdata->tmr_data;
-    struct app_lvgl_label_design msg_content;
-    uint32_t start_x, start_y;
-    char *str;
-
-    g_name.txt = "Claire Dean";
-    g_name.ping_pong = 0;
-    g_name.font = &lv_font_montserrat_30;
-    g_name.align = LV_LABEL_ALIGN_CENTER;
-    g_name.fmt = RTGRAPHIC_PIXEL_FORMAT_RGB565;
-    g_name.img[0].width = FUNC_WIN_XRES;
-    g_name.img[0].height = lv_font_montserrat_30.line_height;
-    g_name.img[0].stride = FUNC_WIN_XRES * (MSG_WIN_COLOR_DEPTH >> 3);
-    if (g_name.img[0].pdata != NULL)
-    {
-        rt_free_psram(g_name.img[0].pdata);
-    }
-    g_name.img[0].pdata = rt_malloc_psram(g_name.img[0].stride * g_name.img[0].height);
-    RT_ASSERT(g_name.img[0].pdata != NULL);
-    app_lv_label_design(&g_name);
-
-    str = rt_malloc(1024);
-    RT_ASSERT(str != NULL);
-    rt_snprintf(str, 1024,
-                "%02d:%02d\n"
-                "Do you have time to "
-                "watch an IMAX movie "
-                "in one square city "
-                "this weekend? It's "
-                "near Bao'an center.%c",
-                time->hour, time->minute, '\0');
-
-    msg_content.txt = str;
-    msg_content.ping_pong = 1;
-    msg_content.font = &lv_font_montserrat_30;
-    msg_content.align = LV_LABEL_ALIGN_CENTER;
-    msg_content.fmt = RTGRAPHIC_PIXEL_FORMAT_RGB565;
-    msg_content.img[1].width = msg_content.img[0].width = MSG_WIN_FB_W - 20;
-    msg_content.img[1].height = msg_content.img[0].height = MSG_WIN_YRES;
-    msg_content.img[1].stride = msg_content.img[0].stride = MSG_WIN_FB_W * (MSG_WIN_COLOR_DEPTH >> 3);
-    start_x = ((MSG_WIN_XRES - LV_HOR_RES) / 2 + 10);
-    start_y = MSG_WIN_YRES;
-    msg_content.img[0].pdata = msgdata->fb[0] + start_y * msg_content.img[0].stride + start_x * (MSG_WIN_COLOR_DEPTH >> 3);
-    msg_content.img[1].pdata = msgdata->fb[1] + start_y * msg_content.img[1].stride + start_x * (MSG_WIN_COLOR_DEPTH >> 3);
-    app_lv_label_design(&msg_content);
-
-    rt_free(str);
-
-    return RT_EOK;
-}
-design_cb_t lv_message_main_design_t = {.cb = app_lv_message_main_design,};
 
 /*
  **************************************************************************************************

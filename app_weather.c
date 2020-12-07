@@ -31,13 +31,16 @@ static rt_uint8_t update_all = 1;
 static rt_uint8_t sunnys_num = 0;
 static image_info_t weather_bg;
 static image_info_t watch_sunnys_info[5];
+static struct image_st target;
 
-rt_err_t app_weather_init(void)
+rt_err_t app_weather_init(void *param)
 {
+    struct image_st *par = (struct image_st *)param;
     rt_uint16_t i;
     img_load_info_t img_load_info;
     char img_name[64];
 
+    target = *par;
     // backup
     rt_memset(&weather_bg, 0, sizeof(image_info_t));
     weather_bg.type  = IMG_TYPE_RAW;
@@ -80,9 +83,10 @@ rt_err_t app_weather_init(void)
 
 rt_err_t app_weather_design(void *param)
 {
-    main_page_design_param_t *par = (main_page_design_param_t *)param;
-    rt_uint8_t   *fb      = app_main_page_data->top_fb;
-    rt_uint16_t  startx = (rt_uint16_t)(par->buf_id) * CLOCK_WIN_XRES;
+    struct image_st *par = &target;
+    rt_uint8_t   *fb     = par->pdata;
+    rt_uint32_t  vir_w  = par->stride / format2depth[par->format];
+    rt_uint16_t  startx = 0;
     rt_uint16_t  starty = 0;
     image_info_t *img_info = NULL;
     rt_err_t     ret;
@@ -90,121 +94,121 @@ rt_err_t app_weather_design(void *param)
     if (update_all)
     {
         if (app_lvgl_init_check() == 0)
-            return RT_ERROR;
+            return -RT_ERROR;
         //backup
         img_info = &weather_bg;
-        rt_display_img_fill(img_info, fb, CLOCK_WIN_FB_W, startx, starty);
+        rt_display_img_fill(img_info, fb, vir_w, startx, starty);
 
         struct app_lvgl_label_design label;
         label.ping_pong = 0;
         label.font = &lv_font_simhei_36;
         label.align = LV_LABEL_ALIGN_CENTER;
         label.fmt = RTGRAPHIC_PIXEL_FORMAT_RGB565;
-        label.img[0].stride = CLOCK_WIN_FB_W * (CLOCK_WIN_COLOR_DEPTH >> 3);
+        label.img[0] = *par;
 
         //region
-        startx = (rt_uint16_t)(par->buf_id) * CLOCK_WIN_XRES;
+        startx = 0;
         starty = 40;
         label.txt = "鼓楼区";
         label.img[0].width = CLOCK_WIN_XRES;
         label.img[0].height = lv_font_simhei_36.line_height;
-        label.img[0].pdata = fb + (startx + starty * CLOCK_WIN_FB_W) * (CLOCK_WIN_COLOR_DEPTH >> 3);
+        label.img[0].pdata = fb + (startx + starty * vir_w) * format2depth[par->format];
         ret = app_lv_label_design(&label);
         if (ret != RT_EOK)
         {
-            return RT_ERROR;
+            return -RT_ERROR;
         }
 
         //air quality
-        startx = (rt_uint16_t)(par->buf_id) * CLOCK_WIN_XRES + 176;
+        startx = 176;
         starty = 192;
-        label.txt = "晴  优";
+        label.txt = "晴";
         label.align = LV_LABEL_ALIGN_LEFT;
-        label.img[0].width = 40 * 8;
+        label.img[0].width = 40;
         label.img[0].height = lv_font_simhei_36.line_height;
-        label.img[0].pdata = fb + (startx + starty * CLOCK_WIN_FB_W) * (CLOCK_WIN_COLOR_DEPTH >> 3);
+        label.img[0].pdata = fb + (startx + starty * vir_w) * format2depth[par->format];
         app_lv_label_design(&label);
         if (ret != RT_EOK)
         {
-            return RT_ERROR;
+            return -RT_ERROR;
         }
 
-        // startx = (rt_uint16_t)(par->buf_id) * CLOCK_WIN_XRES + 256;
-        // starty = 192;
-        // label.txt = "优";
-        // label.img[0].width = 40;
-        // label.img[0].height = lv_font_simhei_36.line_height;
-        // label.img[0].pdata = fb + (startx + starty * CLOCK_WIN_FB_W) * (CLOCK_WIN_COLOR_DEPTH >> 3);
-        // app_lv_label_design(&label);
-        // if (ret != RT_EOK)
-        // {
-        //     return RT_ERROR;
-        // }
+        startx = 256;
+        starty = 192;
+        label.txt = "优";
+        label.img[0].width = 40;
+        label.img[0].height = lv_font_simhei_36.line_height;
+        label.img[0].pdata = fb + (startx + starty * vir_w) * format2depth[par->format];
+        app_lv_label_design(&label);
+        if (ret != RT_EOK)
+        {
+            return -RT_ERROR;
+        }
 
-        startx = (rt_uint16_t)(par->buf_id) * CLOCK_WIN_XRES + 290;
+        startx = 290;
         starty = 192;
         label.txt = "12";
         label.img[0].width = 60;
         label.img[0].height = lv_font_simhei_36.line_height;
-        label.img[0].pdata = fb + (startx + starty * CLOCK_WIN_FB_W) * (CLOCK_WIN_COLOR_DEPTH >> 3);
+        label.img[0].pdata = fb + (startx + starty * vir_w) * format2depth[par->format];
         app_lv_label_design(&label);
         if (ret != RT_EOK)
         {
-            return RT_ERROR;
+            return -RT_ERROR;
         }
 
         //temperature
-        startx = (rt_uint16_t)(par->buf_id) * CLOCK_WIN_XRES;
+        startx = 0;
         starty = 260;
         label.align = LV_LABEL_ALIGN_CENTER;
         label.txt = "27℃/18℃";
         label.img[0].width = CLOCK_WIN_XRES;
         label.img[0].height = lv_font_simhei_36.line_height;
-        label.img[0].pdata = fb + (startx + starty * CLOCK_WIN_FB_W) * (CLOCK_WIN_COLOR_DEPTH >> 3);
+        label.img[0].pdata = fb + (startx + starty * vir_w) * format2depth[par->format];
         app_lv_label_design(&label);
         if (ret != RT_EOK)
         {
-            return RT_ERROR;
+            return -RT_ERROR;
         }
 
         //update time
-        startx = (rt_uint16_t)(par->buf_id) * CLOCK_WIN_XRES;
+        startx = 0;
         starty = 380;
         label.txt = "更新时间 10:26";
         label.img[0].width = CLOCK_WIN_XRES;
         label.img[0].height = lv_font_simhei_36.line_height;
-        label.img[0].pdata = fb + (startx + starty * CLOCK_WIN_FB_W) * (CLOCK_WIN_COLOR_DEPTH >> 3);
+        label.img[0].pdata = fb + (startx + starty * vir_w) * format2depth[par->format];
         app_lv_label_design(&label);
         if (ret != RT_EOK)
         {
-            return RT_ERROR;
+            return -RT_ERROR;
         }
 
         //temperature large
-        startx = (rt_uint16_t)(par->buf_id) * CLOCK_WIN_XRES + 176;
+        startx = 176;
         starty = 118;
         label.txt = "26℃";
         label.font = &lv_font_simhei_72;
         label.img[0].width = 156;
         label.img[0].height = lv_font_simhei_72.line_height;
-        label.img[0].pdata = fb + (startx + starty * CLOCK_WIN_FB_W) * (CLOCK_WIN_COLOR_DEPTH >> 3);
+        label.img[0].pdata = fb + (startx + starty * vir_w) * format2depth[par->format];
         app_lv_label_design(&label);
         if (ret != RT_EOK)
         {
-            return RT_ERROR;
+            return -RT_ERROR;
         }
     }
     update_all = 0;
 
     //sunnys
-    startx = (rt_uint16_t)(par->buf_id) * CLOCK_WIN_XRES + 30;
+    startx = 30;
     starty = 118;
     img_info = &watch_sunnys_info[sunnys_num];
     if (++sunnys_num >= 5)
     {
         sunnys_num = 0;
     }
-    rt_display_img_fill(img_info, fb, CLOCK_WIN_FB_W, startx, starty);
+    rt_display_img_fill(img_info, fb, vir_w, startx, starty);
 
     return RT_EOK;
 }

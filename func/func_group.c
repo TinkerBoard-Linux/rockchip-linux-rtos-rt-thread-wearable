@@ -37,7 +37,8 @@ void *app_func_get_preview(enum app_func_e index)
 
 void app_func_exit(enum app_func_e index)
 {
-    struct app_func_data_t *fdata = g_func_data;
+    struct app_page_data_t *page = g_func_page;
+    struct app_func_private *pdata = page->private;
 
     if (app_func_group[index].exit)
     {
@@ -47,7 +48,7 @@ void app_func_exit(enum app_func_e index)
     {
         app_func_group[APP_FUNC_COMMON].exit();
     }
-    fdata->func_id = APP_FUNC_COMMON;
+    pdata->func_id = APP_FUNC_COMMON;
 
     if (music_pause)
     {
@@ -58,17 +59,18 @@ void app_func_exit(enum app_func_e index)
 
 void app_func_enter(enum app_func_e index)
 {
-    struct app_func_data_t *fdata = g_func_data;
+    struct app_page_data_t *page = g_func_page;
+    struct app_func_private *pdata = page->private;
 
     if (app_func_group[index].enter)
     {
         app_func_group[index].enter(app_func_group[index].param);
-        fdata->func_id = index;
+        pdata->func_id = index;
     }
     else if (app_func_group[APP_FUNC_COMMON].enter)
     {
         app_func_group[APP_FUNC_COMMON].enter(app_func_group[APP_FUNC_COMMON].param);
-        fdata->func_id = APP_FUNC_COMMON;
+        pdata->func_id = APP_FUNC_COMMON;
     }
 }
 

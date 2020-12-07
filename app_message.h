@@ -24,15 +24,6 @@
  **************************************************************************************************
  */
 
-enum ver_page
-{
-    VER_PAGE_BOTTOM = -1,
-    VER_PAGE_NULL   = 0,
-    VER_PAGE_TOP    = 1,
-};
-
-extern app_disp_refrsh_param_t app_message_main_refrsh_param;
-
 /*
  **************************************************************************************************
  *
@@ -41,21 +32,18 @@ extern app_disp_refrsh_param_t app_message_main_refrsh_param;
  **************************************************************************************************
  */
 
-struct app_message_main_data_t
+struct app_msg_private
 {
-    rt_uint8_t  buf_id;
-    rt_uint8_t *fb[2];
-    rt_uint32_t fblen;
+    uint8_t  *fb[2];
+    uint8_t  buf_id;
     rt_uint32_t offset;
     rt_uint8_t *logo_buf;
     rt_uint8_t *minilogo_buf;
 
-    rt_int16_t  mov_dir;
-    rt_int16_t  mov_offset;
-
     rt_int8_t   msg_cnt;
 };
-extern struct app_message_main_data_t *g_message_main_data;
+
+extern struct app_page_data_t *g_message_page;
 extern struct app_touch_cb_t app_message_main_touch_cb;
 
 rt_err_t app_message_main_refresh(struct rt_display_config *wincfg, void *param);

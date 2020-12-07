@@ -138,7 +138,7 @@ static rt_err_t lv_touch_cb(struct rt_touch_data *point, rt_uint8_t num)
 
     if (RT_EOK != rt_touchpoint_is_valid(p, b))
     {
-        return RT_ERROR;
+        return -RT_ERROR;
     }
 
     if (b->event == RT_TOUCH_EVENT_DOWN)
@@ -228,18 +228,19 @@ static rt_err_t lv_refr_request(struct rt_display_mq_t *disp_mq)
  */
 static void lv_lcd_flush(void)
 {
+    struct app_page_data_t *page = g_setting_page;
     struct rt_display_mq_t disp_mq;
-    struct rt_display_config *wincfg = &disp_mq.win[0];
+    struct rt_display_config *wincfg = &disp_mq.win[page->win_id];
     struct rt_device_graphic_info *info = &app_main_data->disp->info;
 
     rt_memset(&disp_mq, 0, sizeof(struct rt_display_mq_t));
-    disp_mq.win[0].zpos = app_func_refrsh_param.win_layer;
-    disp_mq.cfgsta |= (0x01 << 0);
+    disp_mq.win[0].zpos = page->win_layer;
+    disp_mq.cfgsta |= (0x01 << page->win_id);
 
     wincfg->format  = RTGRAPHIC_PIXEL_FORMAT_RGB565;
     wincfg->lut     = RT_NULL;
     wincfg->lutsize = 0;
-    wincfg->winId   = app_func_refrsh_param.win_id;
+    wincfg->winId   = page->win_id;
     wincfg->fb      = g_lvdata->fb;
     wincfg->fblen   = g_lvdata->fblen;
     wincfg->w       = LV_FB_W;
@@ -290,7 +291,7 @@ void func_backlight_enter(void *param)
     rt_touchpanel_block_register(&lv_touch_block);
 
     /* Re-register touch process for common using */
-    app_func_show(param);
+    app_setting_show(param);
 
     /* Creat event for lcd display */
     disp_event = rt_event_create("bl_event", RT_IPC_FLAG_FIFO);
@@ -304,20 +305,21 @@ void func_backlight_enter(void *param)
 
 void func_backlight_init(void *param)
 {
-    app_func_refrsh_param.win_id    = APP_CLOCK_WIN_2;
-    app_func_refrsh_param.win_layer = WIN_TOP_LAYER;
+    struct app_page_data_t *page = g_setting_page;
 
-    g_func_data->fblen = g_lvdata->fblen;
-    g_func_data->fb    = g_lvdata->fb;
-    g_func_data->max_w = LV_FB_W;
-    g_func_data->max_h = LV_FB_H;
-    g_func_data->alpha_win = 0;
+    page->w = LV_FB_W;
+    page->h = LV_FB_H;
+    page->vir_w = LV_FB_W;
+    page->ver_offset = 0;
+    page->hor_offset = 0;
+    page->fblen = g_lvdata->fblen;
+    page->fb    = g_lvdata->fb;
 
     // first display design
     lv_backlight_design();
 
     // copy data to app_setting_main
-    app_func_set_preview(APP_FUNC_BREATH, g_lvdata->fb);
+    app_func_set_preview(APP_FUNC_BREATH, page->fb);
 }
 
 void func_backlight_exit(void)

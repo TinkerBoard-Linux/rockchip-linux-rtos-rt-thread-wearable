@@ -51,6 +51,7 @@
  *
  **************************************************************************************************
  */
+static struct app_page_data_t *app_cur_page = RT_NULL;
 struct app_main_data_t *app_main_data = RT_NULL;
 
 static const rt_uint8_t month_days[] = {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
@@ -76,7 +77,7 @@ rt_err_t app_load_img(img_load_info_t *info, rt_uint8_t *pbuf, rt_uint16_t w, rt
     if (fd <= 0)
     {
         rt_kprintf("open %s failed\n", info->name);
-        return RT_ERROR;
+        return -RT_ERROR;
     }
     fseek(fd, 0, SEEK_SET);
 
@@ -256,72 +257,23 @@ void app_main_timer_cb_unregister(void)
  *
  **************************************************************************************************
  */
-static refrsh_request_param_t clksmooth_refrsh_request_param;
 rt_err_t app_main_touch_smooth_design(void *param)
 {
-    struct app_main_page_data_t *cdata = app_main_page_data;
-    struct app_message_main_data_t *msgdata = g_message_main_data;
-    struct app_funclist_data_t *fdata = g_funclist_data;
     struct app_main_data_t *pdata = app_main_data;
-    refrsh_request_param_t *par = (refrsh_request_param_t *)param;
-    struct rt_touch_data *down_p   = &pdata->down_point[0];
+    page_refrsh_request_param_t *par = (page_refrsh_request_param_t *)param;
+    uint16_t mov_fix;
     uint32_t tick;
 
     if (pdata->dir_mode && pdata->mov_speed)
     {
         tick = HAL_GetTick() - pdata->down_timestamp;
         pdata->down_timestamp = HAL_GetTick();
-        pdata->mov_fix = ((int32_t)tick * pdata->mov_speed) / 1000;
+        mov_fix = ((int32_t)tick * pdata->mov_speed) / 1000;
 
-        switch (par->id)
-        {
-        case ID_MAIN:
-            cdata->mov_offset -= pdata->mov_fix;
-            break;
+        if (par->cb)
+            par->cb(mov_fix);
 
-        case ID_MSG:
-            msgdata->mov_offset += pdata->mov_fix;
-            if (pdata->ver_page == VER_PAGE_TOP && msgdata->mov_offset <= 0)
-            {
-                msgdata->mov_offset = 1;
-            }
-            if (pdata->ver_page == VER_PAGE_BOTTOM && msgdata->mov_offset >= 0)
-            {
-                msgdata->mov_offset = -1;
-            }
-
-            if (pdata->ver_page == VER_PAGE_NULL)
-            {
-                if (down_p->y_coordinate < (DISP_YRES / 2) && msgdata->mov_offset <= 0)
-                {
-                    msgdata->mov_offset = 1;
-                }
-                if (down_p->y_coordinate > (DISP_YRES / 2) && msgdata->mov_offset >= 0)
-                {
-                    msgdata->mov_offset = -1;
-                }
-            }
-            break;
-
-        case ID_FUNCLIST:
-            fdata->hor_offset -= pdata->mov_fix;
-            if (fdata->hor_offset < 0)
-            {
-                fdata->hor_offset = 0;
-            }
-            if (fdata->hor_offset > (FUNC_WIN_FB_W - FUNC_WIN_XRES))
-            {
-                fdata->hor_offset = FUNC_WIN_FB_W - FUNC_WIN_XRES;
-            }
-            break;
-
-        default:
-            break;
-        }
-
-        clksmooth_refrsh_request_param.wflag = (rt_uint32_t)par->wflag;
-        clksmooth_refrsh_request_param.wait = RT_WAITING_FOREVER;
-        app_refresh_request(&clksmooth_refrsh_request_param);
+        app_refresh_request(par);
     }
 
     pdata->smooth_design = 0;
@@ -329,7 +281,7 @@ rt_err_t app_main_touch_smooth_design(void *param)
     return RT_EOK;
 }
 
-void app_slide_refresh(refrsh_request_param_t *param)
+void app_slide_refresh(page_refrsh_request_param_t *param)
 {
 #ifdef APP_USING_SMOOTH_REFRESH
     if (app_main_data->smooth_design != 0)
@@ -354,6 +306,12 @@ void app_main_keep_screen_on(void)
 #endif
 }
 
+static rt_uint8_t wait_event = RT_TOUCH_EVENT_NONE;
+void app_main_touch_skip(rt_uint8_t event)
+{
+    wait_event = event;
+}
+
 rt_err_t app_main_touch_process(struct rt_touch_data *point, rt_uint8_t num)
 {
     struct app_main_data_t *pdata = app_main_data;
@@ -362,12 +320,11 @@ rt_err_t app_main_touch_process(struct rt_touch_data *point, rt_uint8_t num)
     struct rt_touch_data *cur_p   = &pdata->cur_point[0];
     struct rt_touch_data *down_p   = &pdata->down_point[0];
     struct rt_touchpanel_block *b = &pdata->touch_block;
-    static rt_uint8_t wait_event  = RT_TOUCH_EVENT_NONE;
     rt_err_t ret;
 
     if (RT_EOK != rt_touchpoint_is_valid(p, b))
     {
-        return RT_ERROR;
+        return -RT_ERROR;
     }
 
     struct rt_touch_data cur_point;
@@ -383,7 +340,7 @@ rt_err_t app_main_touch_process(struct rt_touch_data *point, rt_uint8_t num)
         mq.cmd = MQ_BACKLIGHT_SWITCH;
         mq.param = (void *)(uint32_t)app_main_data->bl;
         rt_mq_send(app_main_data->mq, &mq, sizeof(clock_app_mq_t));
-        wait_event = RT_TOUCH_EVENT_UP;
+        app_main_touch_skip(RT_TOUCH_EVENT_UP);
 #endif
         return RT_EOK;
     }
@@ -391,7 +348,7 @@ rt_err_t app_main_touch_process(struct rt_touch_data *point, rt_uint8_t num)
     if (wait_event)
     {
         if (b->event == wait_event)
-            wait_event = RT_TOUCH_EVENT_NONE;
+            app_main_touch_skip(RT_TOUCH_EVENT_NONE);
         return RT_EOK;
     }
 
@@ -408,12 +365,11 @@ rt_err_t app_main_touch_process(struct rt_touch_data *point, rt_uint8_t num)
         pdata->ydir     = 0;
         pdata->xoffset  = 0;
         pdata->yoffset  = 0;
-        pdata->mov_fix = 0;
         pdata->touch_event = RT_TOUCH_EVENT_DOWN;
 
-        if (pdata->tp_touch_down)
+        if (pdata->touch_cb.tp_touch_down)
         {
-            ret = pdata->tp_touch_down(pdata);
+            ret = pdata->touch_cb.tp_touch_down(pdata);
             RT_ASSERT(ret == RT_EOK);
         }
         break;
@@ -427,33 +383,28 @@ rt_err_t app_main_touch_process(struct rt_touch_data *point, rt_uint8_t num)
             {
                 if (ABS(p->x_coordinate - down_p->x_coordinate) > ABS(p->y_coordinate - down_p->y_coordinate))
                 {
-                    pdata->dir_mode = TOUCH_DIR_MODE_LR;
-                    if (pdata->tp_move_lr_start)
+                    if (pdata->touch_cb.tp_move_lr_start)
                     {
-                        ret = pdata->tp_move_lr_start(pdata);
-                        RT_ASSERT(ret == RT_EOK);
+                        ret = pdata->touch_cb.tp_move_lr_start(pdata);
+                        if (ret == RT_EOK)
+                            pdata->dir_mode = TOUCH_DIR_MODE_LR;
+                    }
+                    else
+                    {
+                        pdata->dir_mode = TOUCH_DIR_MODE_LR;
                     }
                 }
                 else
                 {
-                    if (pdata->ver_page)
+                    if (pdata->touch_cb.tp_move_updn_start)
                     {
-                        pdata->dir_mode = TOUCH_DIR_MODE_UPDN;
-                        if (pdata->tp_move_updn_start)
-                        {
-                            ret = pdata->tp_move_updn_start(pdata);
-                            RT_ASSERT(ret == RT_EOK);
-                        }
+                        ret = pdata->touch_cb.tp_move_updn_start(pdata);
+                        if (ret == RT_EOK)
+                            pdata->dir_mode = TOUCH_DIR_MODE_UPDN;
                     }
-                    else if (((int32_t)down_p->y_coordinate <= CLOCK_WIN_YRES / 3) ||
-                             ((int32_t)down_p->y_coordinate >= CLOCK_WIN_YRES * 2 / 3))
+                    else
                     {
                         pdata->dir_mode = TOUCH_DIR_MODE_UPDN;
-                        if (pdata->tp_move_updn_start)
-                        {
-                            ret = pdata->tp_move_updn_start(pdata);
-                            RT_ASSERT(ret == RT_EOK);
-                        }
                     }
                 }
             }
@@ -471,15 +422,18 @@ rt_err_t app_main_touch_process(struct rt_touch_data *point, rt_uint8_t num)
                     }
                 }
                 pdata->xoffset += (rt_int16_t)(p->x_coordinate - pre_p->x_coordinate);
+                if (pdata->xoffset > TOUCH_REGION_W)
+                    pdata->xoffset = TOUCH_REGION_W;
+                if (pdata->xoffset < -TOUCH_REGION_W)
+                    pdata->xoffset = -TOUCH_REGION_W;
                 pdata->mov_speed = ((int32_t)p->x_coordinate - (int32_t)pre_p->x_coordinate) * 1000 / (int32_t)(p->timestamp - pre_p->timestamp);
-                pdata->mov_fix = 0;
                 pdata->down_timestamp = HAL_GetTick();
 
                 rt_memcpy(cur_p, p, sizeof(struct rt_touch_data));
-                if (pdata->tp_move_lr)
+                if (pdata->touch_cb.tp_move_lr)
                 {
                     pdata->tb_flag = 0;
-                    ret = pdata->tp_move_lr(pdata);
+                    ret = pdata->touch_cb.tp_move_lr(pdata);
                     if (RT_EOK != ret)
                     {
                         pdata->tb_flag = 1;
@@ -501,15 +455,18 @@ rt_err_t app_main_touch_process(struct rt_touch_data *point, rt_uint8_t num)
                     }
                 }
                 pdata->yoffset += (rt_int16_t)(p->y_coordinate - pre_p->y_coordinate);
+                if (pdata->yoffset > TOUCH_REGION_H)
+                    pdata->yoffset = TOUCH_REGION_H;
+                if (pdata->yoffset < -TOUCH_REGION_H)
+                    pdata->yoffset = -TOUCH_REGION_H;
                 pdata->mov_speed = ((int32_t)p->y_coordinate - (int32_t)pre_p->y_coordinate) * 1000 / (int32_t)(p->timestamp - pre_p->timestamp);
-                pdata->mov_fix = 0;
                 pdata->down_timestamp = HAL_GetTick();
 
                 rt_memcpy(cur_p, p, sizeof(struct rt_touch_data));
-                if (pdata->tp_move_updn)
+                if (pdata->touch_cb.tp_move_updn)
                 {
                     pdata->tb_flag = 0;
-                    ret = pdata->tp_move_updn(pdata);
+                    ret = pdata->touch_cb.tp_move_updn(pdata);
                     if (RT_EOK != ret)
                     {
                         pdata->tb_flag = 1;
@@ -523,23 +480,22 @@ rt_err_t app_main_touch_process(struct rt_touch_data *point, rt_uint8_t num)
     case RT_TOUCH_EVENT_UP:
         if (pdata->dir_mode != TOUCH_DIR_MODE_NULL)
         {
-            if (pdata->tp_move_up)
+            if (pdata->touch_cb.tp_move_up)
             {
-                ret = pdata->tp_move_up(pdata);
+                ret = pdata->touch_cb.tp_move_up(pdata);
                 RT_ASSERT(ret == RT_EOK);
             }
         }
         else
         {
-            if (pdata->tp_touch_up)
+            if (pdata->touch_cb.tp_touch_up)
             {
-                ret = pdata->tp_touch_up(pdata);
+                ret = pdata->touch_cb.tp_touch_up(pdata);
                 RT_ASSERT(ret == RT_EOK);
             }
         }
         pdata->touch_event = RT_TOUCH_EVENT_UP;
         pdata->smooth_design = 0;
-        pdata->mov_fix = 0;
         app_main_touch_value_reset();
         break;
 
@@ -585,32 +541,32 @@ void app_main_touch_unregister(void)
 {
     struct app_main_data_t *pdata = app_main_data;
 
-    pdata->tp_touch_down      = RT_NULL;
+    pdata->touch_cb.tp_touch_down      = RT_NULL;
 
-    pdata->tp_move_lr_start   = RT_NULL;
-    pdata->tp_move_updn_start = RT_NULL;
+    pdata->touch_cb.tp_move_lr_start   = RT_NULL;
+    pdata->touch_cb.tp_move_updn_start = RT_NULL;
 
-    pdata->tp_move_lr         = RT_NULL;
-    pdata->tp_move_updn       = RT_NULL;
+    pdata->touch_cb.tp_move_lr         = RT_NULL;
+    pdata->touch_cb.tp_move_updn       = RT_NULL;
 
-    pdata->tp_move_up         = RT_NULL;
-    pdata->tp_touch_up        = RT_NULL;
+    pdata->touch_cb.tp_move_up         = RT_NULL;
+    pdata->touch_cb.tp_touch_up        = RT_NULL;
 }
 
 void app_main_touch_register(struct app_touch_cb_t *tcb)
 {
     struct app_main_data_t *pdata = app_main_data;
 
-    pdata->tp_touch_down      = tcb->tp_touch_down;
+    pdata->touch_cb.tp_touch_down      = tcb->tp_touch_down;
 
-    pdata->tp_move_lr_start   = tcb->tp_move_lr_start;
-    pdata->tp_move_updn_start = tcb->tp_move_updn_start;
+    pdata->touch_cb.tp_move_lr_start   = tcb->tp_move_lr_start;
+    pdata->touch_cb.tp_move_updn_start = tcb->tp_move_updn_start;
 
-    pdata->tp_move_lr         = tcb->tp_move_lr;
-    pdata->tp_move_updn       = tcb->tp_move_updn;
+    pdata->touch_cb.tp_move_lr         = tcb->tp_move_lr;
+    pdata->touch_cb.tp_move_updn       = tcb->tp_move_updn;
 
-    pdata->tp_move_up         = tcb->tp_move_up;
-    pdata->tp_touch_up        = tcb->tp_touch_up;
+    pdata->touch_cb.tp_move_up         = tcb->tp_move_up;
+    pdata->touch_cb.tp_touch_up        = tcb->tp_touch_up;
 }
 
 /*
@@ -644,7 +600,7 @@ void app_design_request(rt_uint8_t urgent, design_cb_t *design, void *param)
 
     clock_app_mq_t mq = {MQ_DESIGN_UPDATE, param};
     ret = rt_mq_send(pdata->mq, &mq, sizeof(clock_app_mq_t));
-    RT_ASSERT(ret != RT_ERROR);
+    RT_ASSERT(ret != -RT_ERROR);
 }
 
 /**
@@ -714,7 +670,7 @@ void app_refresh_request(void *param)
 {
     clock_app_mq_t mq = {MQ_REFR_UPDATE, param};
     rt_err_t ret = rt_mq_send(app_main_data->mq, &mq, sizeof(clock_app_mq_t));
-    RT_ASSERT(ret != RT_ERROR);
+    RT_ASSERT(ret != -RT_ERROR);
 }
 
 /**
@@ -737,7 +693,7 @@ static rt_err_t app_main_refresh_done(void)
     return (rt_event_send(app_main_data->event, EVENT_REFR_DONE));
 }
 
-static rt_err_t app_main_refresh_request(struct rt_display_mq_t *disp_mq, rt_int32_t wait)
+rt_err_t app_main_refresh_request(struct rt_display_mq_t *disp_mq, rt_int32_t wait)
 {
     rt_err_t ret;
 
@@ -755,7 +711,7 @@ static rt_err_t app_main_refresh_request(struct rt_display_mq_t *disp_mq, rt_int
     //request refresh display data to Pannel
     disp_mq->disp_finish = app_main_refresh_done;
     ret = rt_mq_send(app_main_data->disp->disp_mq, disp_mq, sizeof(struct rt_display_mq_t));
-    RT_ASSERT(ret != RT_ERROR);
+    RT_ASSERT(ret != -RT_ERROR);
 
     if (ret != RT_EOK)
     {
@@ -771,39 +727,9 @@ static rt_err_t app_main_refresh_request(struct rt_display_mq_t *disp_mq, rt_int
  */
 static rt_err_t app_main_refresh(struct app_main_data_t *pdata, void *param)
 {
-    rt_err_t ret = RT_EOK;
-    struct rt_display_mq_t disp_mq;
-    refrsh_request_param_t *par = (refrsh_request_param_t *)param;
+    page_refrsh_request_param_t *par = (page_refrsh_request_param_t *)param;
 
-    rt_memset(&disp_mq, 0, sizeof(struct rt_display_mq_t));
-    for (rt_uint8_t winid = 0; winid < 3; winid++)
-    {
-        if ((pdata->refr[winid].cb) && (par->wflag & (0x01 << winid)))
-        {
-            ret = pdata->refr[winid].cb(&disp_mq.win[winid], pdata->refr[winid].param);
-            if (ret == RT_EOK)
-            {
-                disp_mq.cfgsta |= (0x01 << winid);
-            }
-        }
-    }
-
-    if (disp_mq.cfgsta)
-    {
-        ret = app_main_refresh_request(&disp_mq, par->wait);
-    }
-
-    return ret;
-}
-
-/**
- * Direct refrest to LCD.
- */
-rt_err_t app_refresh_now(void *param)
-{
-    struct app_main_data_t *pdata = app_main_data;
-
-    return (app_main_refresh(pdata, param));
+    return app_page_refresh(par->page, par->page_num, par->auto_resize);
 }
 
 void app_asr_cb(void)
@@ -822,13 +748,16 @@ void app_play_cb(void)
 /*
  **************************************************************************************************
  *
- * clock demo init & thread
+ * app init & thread
  *
  **************************************************************************************************
  */
-/**
- * clock demo thread
- */
+
+void app_enter_page(struct app_page_data_t *page)
+{
+    app_cur_page = page;
+    app_page_refresh(page, 1, 0);
+}
 
 void app_wake_up(void)
 {
@@ -848,7 +777,7 @@ void app_wake_up(void)
     mq.cmd = MQ_BACKLIGHT_SWITCH;
     mq.param = (void *)(uint32_t)app_main_data->bl;
     rt_err_t ret = rt_mq_send(app_main_data->mq, &mq, sizeof(clock_app_mq_t));
-    RT_ASSERT(ret != RT_ERROR);
+    RT_ASSERT(ret != -RT_ERROR);
 }
 
 #ifdef RT_USING_BMI270
@@ -862,12 +791,16 @@ void app_bmi_isr(void)
 }
 #endif
 
-static void app_main_switch_panel(void *param)
+static void app_main_set_panel_bl(void *param)
 {
-    uint16_t bl = (uint16_t)(uint32_t)param;
+    uint16_t en = (uint16_t)(uint32_t)param;
+    uint16_t bl;
     rt_err_t ret;
 
-    if (app_main_data->bl_en == 0)
+    if (app_main_data->bl_en == !!en)
+        return;
+
+    if (en)
         bl = app_main_data->bl;
     else
         bl = 0;
@@ -875,7 +808,7 @@ static void app_main_switch_panel(void *param)
     ret = rt_display_backlight_set(bl);
     if (ret == RT_EOK)
     {
-        app_main_data->bl_en = (bl > 0) ? 1 : 0;
+        app_main_data->bl_en = en;
 #if APP_TIMING_LIGHTOFF
         if (app_main_data->bl_time)
         {
@@ -894,7 +827,7 @@ void app_bl_switch(void)
     mq.cmd = MQ_BACKLIGHT_SWITCH;
     mq.param = (void *)(app_main_data->bl_en == 1 ? 0 : app_main_data->bl);
     rt_err_t ret = rt_mq_send(app_main_data->mq, &mq, sizeof(clock_app_mq_t));
-    RT_ASSERT(ret != RT_ERROR);
+    RT_ASSERT(ret != -RT_ERROR);
 }
 MSH_CMD_EXPORT_ALIAS(app_bl_switch, switch, switch panel backlight);
 
@@ -944,7 +877,7 @@ static void app_main_backlight_timer(void *arg)
     {
         clock_app_mq_t mq = {MQ_BACKLIGHT_SWITCH, (void *)0};
         rt_err_t ret = rt_mq_send(app_main_data->mq, &mq, sizeof(clock_app_mq_t));
-        RT_ASSERT(ret != RT_ERROR);
+        RT_ASSERT(ret != -RT_ERROR);
     }
 }
 #endif
@@ -969,6 +902,52 @@ void app_main_set_bl_timeout(uint32_t set_time)
         }
     }
 }
+
+void set_bl(int argc, char *argv[])
+{
+    int bl = -1;
+    int to = -1;
+
+    if (argc < 3)
+        return;
+
+    argc--;
+    argv++;
+    while (argc)
+    {
+        if (*argv && (strcmp(*argv, "-t") == 0))
+        {
+            argc--;
+            argv++;
+            if (*argv)
+                to = atoi(*argv);
+        }
+        else if (argv && (strcmp(*argv, "-b") == 0))
+        {
+            argc--;
+            argv++;
+            if (*argv)
+                bl = atoi(*argv);
+        }
+        argc--;
+        argv++;
+    }
+
+    if (bl != -1)
+    {
+        rt_kprintf("Set backlight level %d\n", bl);
+        clock_app_mq_t mq = {MQ_BACKLIGHT_SWITCH, (void *)bl};
+        rt_err_t ret = rt_mq_send(app_main_data->mq, &mq, sizeof(clock_app_mq_t));
+        RT_ASSERT(ret != -RT_ERROR);
+    }
+    if (to != -1)
+    {
+        rt_kprintf("Set timeout %d\n", to);
+        app_main_set_bl_timeout(to);
+    }
+}
+
+MSH_CMD_EXPORT(set_bl, set backlight);
 
 static void app_main_thread(void *p)
 {
@@ -1031,9 +1010,10 @@ static void app_main_thread(void *p)
     app_funclist_init();
     app_charging_init();
     app_func_memory_init();
+    app_setting_memory_init();
     app_preview_init();
-    // app_asr_init();
-    // app_asr_set_callback(app_asr_cb);
+    app_asr_init();
+    app_asr_set_callback(app_asr_cb);
 
     scan_audio();
     app_play_init();
@@ -1077,6 +1057,7 @@ static void app_main_thread(void *p)
 #ifdef RT_USING_BMI270
     bmi270_isr_sethook(app_bmi_isr);
 #endif
+    rt_uint32_t last_cmd = 0;
     while (1)
     {
         if (app_main_data->pm_status == APP_PM_SUSPEND)
@@ -1092,10 +1073,14 @@ static void app_main_thread(void *p)
             app_main_design(pdata, mq.param);
             break;
         case MQ_REFR_UPDATE:
+            /* Skip useless refresh */
+            if (last_cmd == MQ_REFR_UPDATE &&
+                    pdata->touch_event == RT_TOUCH_EVENT_UP)
+                continue;
             app_main_refresh(pdata, mq.param);
             break;
         case MQ_BACKLIGHT_SWITCH:
-            app_main_switch_panel(mq.param);
+            app_main_set_panel_bl(mq.param);
 #if APP_SUSPEND_RESUME_ENABLE
             if (app_main_data->pm_status == APP_PM_RESUME)
                 app_main_data->pm_status = APP_PM_NONE;
@@ -1104,11 +1089,12 @@ static void app_main_thread(void *p)
         default:
             break;
         }
+        last_cmd = mq.cmd;
 
 #if APP_SUSPEND_RESUME_ENABLE
         if ((app_main_data->bl_en == 0) &&
-            (app_main_data->pm_status == APP_PM_NONE) &&
-            (app_main_data->play_state != PLAYER_STATE_RUNNING))
+                (app_main_data->pm_status == APP_PM_NONE) &&
+                (app_main_data->play_state != PLAYER_STATE_RUNNING))
         {
             app_play_stop();
 #ifdef POWER_KEY_BANK_PIN
@@ -1145,7 +1131,7 @@ static int app_main_init(void)
 {
     rt_thread_t thread;
 
-    thread = rt_thread_create("app", app_main_thread, RT_NULL, 8192, 5, 10);
+    thread = rt_thread_create("app", app_main_thread, RT_NULL, 4096, 4, 10);
     RT_ASSERT(thread != RT_NULL);
 
     rt_thread_startup(thread);

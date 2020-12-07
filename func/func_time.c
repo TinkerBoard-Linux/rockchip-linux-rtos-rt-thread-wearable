@@ -26,9 +26,9 @@ static rt_thread_t thread;
 static rt_event_t  disp_event;
 static lv_style_t  main_style;
 static lv_style_t  roller_style;
-static lv_obj_t *  obj_main;
-static lv_obj_t *  obj_hour;
-static lv_obj_t *  obj_min;
+static lv_obj_t   *obj_main;
+static lv_obj_t   *obj_hour;
+static lv_obj_t   *obj_min;
 static struct rt_touchpanel_block lv_touch_block;
 
 static const char *hour_str = "00\n01\n02\n03\n04\n05\n06\n07\n08\n09\n"
@@ -63,7 +63,7 @@ static void lv_time_set_done(void)
 static void lv_time_set_design(void)
 {
     clock_time_t *time = &app_main_data->tmr_data;
-    lv_obj_t * label;
+    lv_obj_t *label;
 
     /* Background */
     lv_style_init(&main_style);
@@ -125,7 +125,7 @@ static rt_err_t lv_touch_cb(struct rt_touch_data *point, rt_uint8_t num)
 
     if (RT_EOK != rt_touchpoint_is_valid(p, b))
     {
-        return RT_ERROR;
+        return -RT_ERROR;
     }
 
     if (b->event == RT_TOUCH_EVENT_DOWN)
@@ -215,18 +215,19 @@ static rt_err_t lv_refr_request(struct rt_display_mq_t *disp_mq)
  */
 static void lv_lcd_flush(void)
 {
+    struct app_page_data_t *page = g_setting_page;
     struct rt_display_mq_t disp_mq;
-    struct rt_display_config *wincfg = &disp_mq.win[0];
+    struct rt_display_config *wincfg = &disp_mq.win[page->win_id];
     struct rt_device_graphic_info *info = &app_main_data->disp->info;
 
     rt_memset(&disp_mq, 0, sizeof(struct rt_display_mq_t));
-    disp_mq.win[0].zpos = app_func_refrsh_param.win_layer;
-    disp_mq.cfgsta |= (0x01 << 0);
+    disp_mq.win[0].zpos = page->win_layer;
+    disp_mq.cfgsta |= (0x01 << page->win_id);
 
     wincfg->format  = RTGRAPHIC_PIXEL_FORMAT_RGB565;
     wincfg->lut     = RT_NULL;
     wincfg->lutsize = 0;
-    wincfg->winId   = app_func_refrsh_param.win_id;
+    wincfg->winId   = page->win_id;
     wincfg->fb      = g_lvdata->fb;
     wincfg->fblen   = g_lvdata->fblen;
     wincfg->w       = LV_FB_W;
@@ -277,34 +278,35 @@ void func_time_set_enter(void *param)
     rt_touchpanel_block_register(&lv_touch_block);
 
     /* Re-register touch process for common using */
-    app_func_show(param);
+    app_setting_show(param);
 
     /* Creat event for lcd display */
     disp_event = rt_event_create("bl_event", RT_IPC_FLAG_FIFO);
     RT_ASSERT(disp_event != RT_NULL);
 
     /* Creat thread for lvgl task running */
-    thread = rt_thread_create("funcbl", lv_time_set_thread, RT_NULL, 2048, 5, 10);
+    thread = rt_thread_create("functime", lv_time_set_thread, RT_NULL, 2048, 5, 10);
     RT_ASSERT(thread != RT_NULL);
     rt_thread_startup(thread);
 }
 
 void func_time_set_init(void *param)
 {
-    app_func_refrsh_param.win_id    = APP_CLOCK_WIN_2;
-    app_func_refrsh_param.win_layer = WIN_TOP_LAYER;
+    struct app_page_data_t *page = g_setting_page;
 
-    g_func_data->fblen = g_lvdata->fblen;
-    g_func_data->fb    = g_lvdata->fb;
-    g_func_data->max_w = LV_FB_W;
-    g_func_data->max_h = LV_FB_H;
-    g_func_data->alpha_win = 0;
+    page->w = LV_FB_W;
+    page->h = LV_FB_H;
+    page->vir_w = LV_FB_W;
+    page->ver_offset = 0;
+    page->hor_offset = 0;
+    page->fblen = g_lvdata->fblen;
+    page->fb    = g_lvdata->fb;
 
     // first display design
     lv_time_set_design();
 
     // copy data to app_setting_main
-    app_func_set_preview(APP_FUNC_BAROMETER, g_lvdata->fb);
+    app_func_set_preview(APP_FUNC_BAROMETER, page->fb);
 }
 
 void func_time_set_exit(void)

@@ -24,6 +24,7 @@
 #include "image_info.h"
 #include "audio_server.h"
 
+#include "app_page.h"
 #if defined(RT_USING_PANEL_AM018RT90211)
 #include "ui_map_368x448.h"
 #elif defined(RT_USING_PANEL_AM014RT90327V0)
@@ -49,7 +50,8 @@
 // mq cmd define
 #define MQ_DESIGN_UPDATE            (0x201UL)
 #define MQ_REFR_UPDATE              (0x202UL)
-#define MQ_BACKLIGHT_SWITCH         (0x203UL)
+#define MQ_PAGE_REFR_UPDATE         (0x203UL)
+#define MQ_BACKLIGHT_SWITCH         (0x204UL)
 
 //event define
 #define EVENT_REFR_DONE             (0x01UL << 0)
@@ -79,15 +81,6 @@
 #define APP_SUSPEND_TIMEOUT         1000    // ms
 #define APP_WDT_ENABLE              1
 
-enum app_smooth_id
-{
-    ID_MAIN = 0,
-    ID_MSG,
-    ID_FUNCLIST,
-    ID_FUNC_UPDN,
-    ID_FUNC_LR,
-};
-
 enum app_play_mode
 {
     APP_PLAY_LIST = 1,
@@ -100,6 +93,13 @@ enum app_pm_status
     APP_PM_NONE,
     APP_PM_SUSPEND,
     APP_PM_RESUME,
+};
+
+enum ver_page
+{
+    VER_PAGE_BOTTOM = -1,
+    VER_PAGE_NULL   = 0,
+    VER_PAGE_TOP    = 1,
 };
 
 /*
@@ -164,6 +164,14 @@ typedef struct
 
 typedef struct
 {
+    struct app_page_data_t *page;
+    uint8_t page_num;
+    uint8_t auto_resize;
+    void (*cb)(int mov_fix);
+} page_refrsh_request_param_t;
+
+typedef struct
+{
     rt_uint8_t win_id;
     rt_uint8_t win_layer;
 } app_disp_refrsh_param_t;
@@ -225,7 +233,6 @@ struct app_main_data_t
     rt_int16_t        ydir;
     rt_int16_t        xoffset;
     rt_int16_t        yoffset;
-    rt_int16_t        mov_fix;
     rt_int16_t        mov_speed;
     rt_uint8_t        smooth_design;
     rt_uint32_t       down_timestamp;
@@ -236,16 +243,7 @@ struct app_main_data_t
     struct rt_touch_data pre_point[1];
     struct rt_touch_data cur_point[1];
 
-    rt_err_t (*tp_touch_down)(void *param);
-
-    rt_err_t (*tp_move_lr_start)(void *param);
-    rt_err_t (*tp_move_updn_start)(void *param);
-
-    rt_err_t (*tp_move_lr)(void *param);
-    rt_err_t (*tp_move_updn)(void *param);
-
-    rt_err_t (*tp_move_up)(void *param);
-    rt_err_t (*tp_touch_up)(void *param);
+    struct app_touch_cb_t touch_cb;
 #if APP_WDT_ENABLE
     rt_device_t wdt_dev;
 #endif
@@ -318,7 +316,6 @@ void app_refresh_request(void *param);
  * Direct refrest to LCD.
  */
 rt_uint32_t app_str2num(const char *str, uint8_t len);
-rt_err_t app_refresh_now(void *param);
 void app_main_touch_value_reset(void);
 void app_main_touch_register(struct app_touch_cb_t *tcb);
 void app_main_touch_unregister(void);
@@ -330,8 +327,10 @@ rt_err_t app_main_touch_smooth_design(void *param);
 rt_err_t app_main_touch_process(struct rt_touch_data *point, rt_uint8_t num);
 void app_main_keep_screen_on(void);
 void app_main_set_bl_timeout(uint32_t set_time);
-void app_slide_refresh(refrsh_request_param_t *param);
+void app_slide_refresh(page_refrsh_request_param_t *param);
 void app_slide_refresh_undo(void);
+void app_enter_page(struct app_page_data_t *page);
+void app_main_touch_skip(rt_uint8_t event);
 
 /**********************
  * SUB INCLUDE
@@ -343,6 +342,7 @@ void app_slide_refresh_undo(void);
 #include "app_clock.h"
 #include "app_weather.h"
 #include "app_music.h"
+#include "app_qrcode_page.h"
 #include "app_message.h"
 #include "app_alpha_win.h"
 #include "app_lvgl_design.h"
@@ -360,5 +360,7 @@ void app_slide_refresh_undo(void);
 #include "func_motion.h"
 #include "func_backlight.h"
 #include "func_time.h"
+#include "setting_group.h"
+#include "setting_common.h"
 
 #endif

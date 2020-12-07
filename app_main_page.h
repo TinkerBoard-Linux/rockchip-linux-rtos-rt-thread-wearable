@@ -24,21 +24,12 @@
  **************************************************************************************************
  */
 
-struct app_main_page_data_t
+struct app_main_page_private
 {
-    rt_uint8_t *bottom_fb;
-    rt_uint32_t bottom_fblen;
-    rt_uint8_t *top_fb;
-    rt_uint32_t top_fblen;
-    rt_uint8_t *bak_fb;
-    rt_uint32_t bak_fblen;
-
-    rt_int8_t   cur_page;
-    rt_int8_t   switch_done;
-    rt_int16_t  mov_dir;
-    rt_int16_t  mov_offset;
+    void *fb;
+    int tar_page;
 };
-extern struct app_main_page_data_t *app_main_page_data;
+extern struct app_page_data_t *app_main_page;
 extern struct app_touch_cb_t main_page_touch_cb;
 
 typedef struct

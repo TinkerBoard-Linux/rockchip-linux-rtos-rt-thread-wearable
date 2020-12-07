@@ -35,7 +35,7 @@ extern app_disp_refrsh_param_t app_charging_refrsh_param;
  **************************************************************************************************
  */
 
-struct app_charging_data_t
+struct app_charging_private
 {
     rt_uint8_t  buf_id;
     rt_uint8_t *fb[2];
@@ -48,7 +48,8 @@ struct app_charging_data_t
     rt_uint32_t *anim_lut[CHARGING_ANIM_STEP];
     rt_uint32_t anim_buflen[CHARGING_ANIM_STEP];
 
-    rt_uint8_t skip_touchup;
+    rt_uint8_t steps;
+    rt_uint8_t reload_idx;
 };
 extern struct app_charging_data_t *g_charging_data;
 
