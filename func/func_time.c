@@ -50,21 +50,27 @@ static const char *min_str =  "00\n01\n02\n03\n04\n05\n06\n07\n08\n09\n"
  */
 static void lv_time_set_done(void)
 {
-    clock_time_t *time = &app_main_data->tmr_data;
+    struct tm time;
+
+    app_main_get_time(&app_main_data->tmr_data);
+    memcpy(&time, app_main_data->tmr_data, sizeof(struct tm));
 
     char buf[8];
     lv_roller_get_selected_str(obj_hour, buf, sizeof(buf));
-    time->hour = app_str2num(buf, 2);
+    time.tm_hour = app_str2num(buf, 2);
 
     lv_roller_get_selected_str(obj_min, buf, sizeof(buf));
-    time->minute = app_str2num(buf, 2);
+    time.tm_min = app_str2num(buf, 2);
+
+    app_main_set_time(&time);
 }
 
 static void lv_time_set_design(void)
 {
-    clock_time_t *time = &app_main_data->tmr_data;
+    struct tm *time;
     lv_obj_t *label;
 
+    app_main_get_time(&time);
     /* Background */
     lv_style_init(&main_style);
     lv_style_set_bg_color(&main_style, LV_STATE_DEFAULT, LV_COLOR_BLACK);
@@ -85,7 +91,7 @@ static void lv_time_set_design(void)
     lv_roller_set_options(obj_hour, hour_str, LV_ROLLER_MODE_INIFINITE);
     lv_roller_set_visible_row_count(obj_hour, 2);
     lv_obj_align(obj_hour, obj_main, LV_ALIGN_CENTER, -55, 10);
-    lv_roller_set_selected(obj_hour, time->hour - app_str2num(hour_str, 2), LV_ANIM_OFF);
+    lv_roller_set_selected(obj_hour, time->tm_hour - app_str2num(hour_str, 2), LV_ANIM_OFF);
 
     label = lv_label_create(obj_main, NULL);
     lv_label_set_text(label, "Hour");
@@ -96,7 +102,7 @@ static void lv_time_set_design(void)
     lv_roller_set_options(obj_min, min_str, LV_ROLLER_MODE_INIFINITE);
     lv_roller_set_visible_row_count(obj_min, 2);
     lv_obj_align(obj_min, obj_main, LV_ALIGN_CENTER, 55, 10);
-    lv_roller_set_selected(obj_min, time->minute - app_str2num(min_str, 2), LV_ANIM_OFF);
+    lv_roller_set_selected(obj_min, time->tm_min - app_str2num(min_str, 2), LV_ANIM_OFF);
 
     label = lv_label_create(obj_main, NULL);
     lv_label_set_text(label, "Min");

@@ -238,6 +238,7 @@ rt_err_t heartrate_update_design(void *param)
     struct app_page_data_t *page = g_func_page;
     struct app_main_data_t *maindata = app_main_data;
     uint8_t *fb;
+    struct tm *time;
     int start_x, start_y;
     int first_v, next_v;
     int gap;
@@ -246,12 +247,13 @@ rt_err_t heartrate_update_design(void *param)
     int rate_change = 0;
     int do_refr = 0;
 
+    app_main_get_time(&time);
     if (maindata->touch_event != RT_TOUCH_EVENT_UP)
         return RT_EOK;
 
-    if (last_second != app_main_data->tmr_data.second && app_main_data->tmr_data.second % 2 == 0)
+    if (last_second != time->tm_sec && time->tm_sec % 2 == 0)
     {
-        last_second = app_main_data->tmr_data.second;
+        last_second = time->tm_sec;
         start_x = HEARTRATE_CHART_X;
         start_y = HEARTRATE_CHART_Y;
         gap = HEARTRATE_CHART_W / 24;

@@ -54,7 +54,7 @@
 static struct app_page_data_t *app_cur_page = RT_NULL;
 struct app_main_data_t *app_main_data = RT_NULL;
 
-static const rt_uint8_t month_days[] = {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+RT_UNUSED static const rt_uint8_t month_days[] = {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
 extern uint8_t xPsramDataBase[];
 extern uint8_t xPsramBase[];
@@ -110,7 +110,7 @@ rt_uint32_t app_str2num(const char *str, uint8_t len)
     return num;
 }
 
-static rt_uint8_t get_day_of_week(uint16_t year, uint8_t month, uint8_t day)
+RT_UNUSED static rt_uint8_t get_day_of_week(uint16_t year, uint8_t month, uint8_t day)
 {
     rt_uint32_t a = month < 3 ? 1 : 0;
     rt_uint32_t b = year - a;
@@ -120,20 +120,32 @@ static rt_uint8_t get_day_of_week(uint16_t year, uint8_t month, uint8_t day)
     return day_of_week;
 }
 
-static void app_main_init_variable(clock_time_t *time)
+void app_main_get_time(struct tm **tm_time)
 {
+    time_t now;
+
+    now = time(RT_NULL);
+    *tm_time = localtime(&now);
+}
+
+void app_main_set_time(struct tm *time)
+{
+#ifdef RT_USING_RTC
+    set_date(time->tm_year + 1900, time->tm_mon + 1, time->tm_mday);
+    set_time(time->tm_hour, time->tm_min, time->tm_sec);
+#endif
+}
+
+static void app_main_init_variable(struct tm **time)
+{
+#ifdef RT_USING_RTC
     const char *str = FIRMWARE_AUTO_VERSION;
 
-    /*Init the date of clock*/
-    time->year     = app_str2num(&str[0], 4);
-    time->month    = app_str2num(&str[5], 2);
-    time->day      = app_str2num(&str[8], 2);
-    time->weekdays = get_day_of_week(time->year, time->month, time->day);
+    set_date(app_str2num(&str[0], 4), app_str2num(&str[5], 2), app_str2num(&str[8], 2));
+    set_time(app_str2num(&str[11], 2), app_str2num(&str[14], 2), app_str2num(&str[17], 2));
+#endif
 
-    /*Init the date of time*/
-    time->hour    = app_str2num(&str[11], 2);
-    time->minute  = app_str2num(&str[14], 2);
-    time->second  = app_str2num(&str[17], 2);
+    app_main_get_time(time);
 }
 
 static app_clock_cb_t g_timer_cb = {NULL, NULL, 0};
@@ -173,7 +185,6 @@ void app_main_unregister_timeout_cb_if_is(rt_err_t (*cb)(void *param))
 static void app_main_timer_tick(void *parameter)
 {
     struct app_main_data_t *pdata = (struct app_main_data_t *)parameter;
-    clock_time_t *time = &pdata->tmr_data;
 
 #if APP_WDT_ENABLE
     dw_wdt_set_top(APP_WDT_TIMEOUT);
@@ -197,39 +208,6 @@ static void app_main_timer_tick(void *parameter)
             else
             {
                 app_main_register_timeout_cb(NULL, NULL, 0);
-            }
-        }
-    }
-    if (++time->tick >= (RT_TICK_PER_SECOND / APP_TIMER_UPDATE_TICKS))
-    {
-        time->tick = 0;
-        if (++time->second >= 60)
-        {
-            time->second = 0;
-            if (++time->minute >= 60)
-            {
-                time->minute = 0;
-                if (++time->hour >= 24)
-                {
-                    time->hour = 0;
-                    if (++time->weekdays >= 7)
-                    {
-                        time->weekdays = 0;
-                    }
-
-                    if (++time->day > month_days[time->month - 1])
-                    {
-                        time->day = 1;
-                        if (++time->month > 12)
-                        {
-                            time->month = 1;
-                            if (++time->year > 3000)
-                            {
-                                time->year = 1900;
-                            }
-                        }
-                    }
-                }
             }
         }
     }

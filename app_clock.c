@@ -164,7 +164,7 @@ static rt_err_t app_analog_clock_style_design(void *param)
 #if !CLOCK_FAST_RGB565
     rt_uint32_t vir_w = par->stride / format2depth[par->format];
 #endif
-    clock_time_t *time    = &app_main_data->tmr_data;
+    struct tm *time       = app_main_data->tmr_data;
     rt_int8_t    style_id = app_main_data->clock_style;
     rt_uint16_t  xstart   = 0;
     int32_t hour;
@@ -192,23 +192,23 @@ static rt_err_t app_analog_clock_style_design(void *param)
     rt_uint16_t yoffset = (par->width / 2);
 
     //draw hour line
-    hour = time->hour;
+    hour = time->tm_hour;
     if (hour >= 12) hour -= 12;
-    angle = hour * (360 / 12) + (time->minute * 30) / 60 - 90;
+    angle = hour * (360 / 12) + (time->tm_min * 30) / 60 - 90;
     if (angle < 0) angle += 360;
     rt_display_rotate_16bit((float)angle, img_hour->w, img_hour->h, (unsigned short *)img_hour->data,
                             (unsigned short *)((uint32_t)fb + format2depth[par->format] * (yoffset * vir_w + xoffset)),
                             vir_w, 0, img_hour->h / 2);
 
     //draw min line
-    angle = time->minute * (360 / 60) - 90;
+    angle = time->tm_min * (360 / 60) - 90;
     if (angle < 0) angle += 360;
     rt_display_rotate_16bit((float)angle, img_min->w, img_min->h, (unsigned short *)img_min->data,
                             (unsigned short *)((uint32_t)fb + format2depth[par->format] * (yoffset * vir_w + xoffset)),
                             vir_w, 0, img_min->h / 2);
 
     //draw second line
-    angle  = time->second * (360 / 60) - 90;
+    angle  = time->tm_sec * (360 / 60) - 90;
     if (angle < 0) angle += 360;
     rt_display_rotate_16bit((float)angle, img_sec->w, img_sec->h, (unsigned short *)img_sec->data,
                             (unsigned short *)((uint32_t)fb + format2depth[par->format] * (yoffset * vir_w + xoffset)),
@@ -244,12 +244,12 @@ static rt_err_t app_analog_clock_style_design(void *param)
     ps.cy = h_cy;
     ps.pdata = img_hour->data;
 
-    hour = time->hour;
+    hour = time->tm_hour;
     if (hour >= 12)
     {
         hour -= 12;
     }
-    angle = hour * (360 / 12) + (time->minute * 30) / 60 - 90;
+    angle = hour * (360 / 12) + (time->tm_min * 30) / 60 - 90;
     if (angle < 0)
     {
         angle += 360;
@@ -263,7 +263,7 @@ static rt_err_t app_analog_clock_style_design(void *param)
     ps.cy = m_cy;
     ps.pdata = img_min->data;
 
-    angle = time->minute * (360 / 60) - 90;
+    angle = time->tm_min * (360 / 60) - 90;
     if (angle < 0)
     {
         angle += 360;
@@ -271,10 +271,10 @@ static rt_err_t app_analog_clock_style_design(void *param)
     rk_rotate_process_16bit(&ps, &pd, (360 - angle % 360));
 #else
     pbg.pdata = bg_buf;
-    if (preInfo.hour != time->hour || preInfo.min != time->minute || preInfo.style != style_id)
+    if (preInfo.hour != time->tm_hour || preInfo.min != time->tm_min || preInfo.style != style_id)
     {
-        preInfo.hour = time->hour;
-        preInfo.min = time->minute;
+        preInfo.hour = time->tm_hour;
+        preInfo.min = time->tm_min;
         preInfo.style = style_id;
         memset(preInfo.info[0], 0, par->height * 2 * sizeof(short));
         pbg.width = par->width;
@@ -297,12 +297,12 @@ static rt_err_t app_analog_clock_style_design(void *param)
         }
         app_load_img((img_load_info_t *)&img_clk_bkg[style_id], (rt_uint8_t *)pbg.pdata,
                      par->width, par->height, 0, format2depth[par->format]);
-        hour = time->hour;
+        hour = time->tm_hour;
         if (hour >= 12)
         {
             hour -= 12;
         }
-        angle = hour * (360 / 12) + (time->minute * 30) / 60 - 90;
+        angle = hour * (360 / 12) + (time->tm_min * 30) / 60 - 90;
         if (angle < 0)
         {
             angle += 360;
@@ -316,7 +316,7 @@ static rt_err_t app_analog_clock_style_design(void *param)
         ps.cy = m_cy;
         ps.pdata = img_min->data;
 
-        angle = time->minute * (360 / 60) - 90;
+        angle = time->tm_min * (360 / 60) - 90;
         if (angle < 0)
         {
             angle += 360;
@@ -334,7 +334,7 @@ static rt_err_t app_analog_clock_style_design(void *param)
     ps.cy = s_cy;
     ps.pdata = img_sec->data;
 
-    angle = time->second * (360 / 60) - 90;
+    angle = time->tm_sec * (360 / 60) - 90;
     if (angle < 0)
     {
         angle += 360;
@@ -454,7 +454,7 @@ static rt_err_t app_digital_clock_style0_design(void *param)
     struct image_st *par = (struct image_st *)&target;
     rt_uint8_t  *fb   = par->pdata;
     rt_uint32_t vir_w = par->stride / format2depth[par->format];
-    clock_time_t *time    = &app_main_data->tmr_data;
+    struct tm *time   = app_main_data->tmr_data;
     //rt_int8_t    style_id = app_main_data->clock_style;
     rt_uint16_t  startx, deltax, xoffset  = 0;
     rt_uint16_t  starty, deltay, yoffset  = 0;
@@ -469,12 +469,12 @@ static rt_err_t app_digital_clock_style0_design(void *param)
 
     //hour
     deltax   = 0;
-    img_info = &watch_num_l_num_info[time->hour / 10];
+    img_info = &watch_num_l_num_info[time->tm_hour / 10];
     deltay    = (watch_bg.h - img_info->h) / 2;
     rt_display_img_fill(img_info, fb, vir_w, xoffset + startx + deltax, yoffset + starty + deltay);
 
     deltax   += img_info->w;
-    img_info  = &watch_num_l_num_info[time->hour % 10];
+    img_info  = &watch_num_l_num_info[time->tm_hour % 10];
     deltay    = (watch_bg.h - img_info->h) / 2;
     rt_display_img_fill(img_info, fb, vir_w, xoffset + startx + deltax, yoffset + starty + deltay);
 
@@ -486,12 +486,12 @@ static rt_err_t app_digital_clock_style0_design(void *param)
 
     //min
     deltax   += img_info->w;
-    img_info = &watch_num_s_num_info[time->minute / 10];
+    img_info = &watch_num_s_num_info[time->tm_min / 10];
     deltay    = (watch_bg.h - img_info->h) / 2;
     rt_display_img_fill(img_info, fb, vir_w, xoffset + startx + deltax, yoffset + starty + deltay);
 
     deltax   += img_info->w;
-    img_info = &watch_num_s_num_info[time->minute % 10];
+    img_info = &watch_num_s_num_info[time->tm_min % 10];
     deltay    = (watch_bg.h - img_info->h) / 2;
     rt_display_img_fill(img_info, fb, vir_w, xoffset + startx + deltax, yoffset + starty + deltay);
 

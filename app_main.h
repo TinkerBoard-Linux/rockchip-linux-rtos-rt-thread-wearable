@@ -8,9 +8,12 @@
 #define __APP_MAIN__
 #include <rtthread.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <math.h>
 #include <dfs_posix.h>
 
+#include "drivers/rtc.h"
 #include "drv_heap.h"
 #include "drv_display.h"
 #include "image_info.h"
@@ -218,8 +221,9 @@ struct app_main_data_t
 #if APP_TIMING_LIGHTOFF
     rt_timer_t        bl_timer;
 #endif
-    clock_time_t      tmr_data;
+    struct tm         *tmr_data;
     void (*timer_cb)(void);
+    uint32_t          timer_cycle;
 
     rt_slist_t        design_list;
     refresh_cb_t      refr[3];
@@ -331,6 +335,8 @@ void app_slide_refresh(page_refrsh_request_param_t *param);
 void app_slide_refresh_undo(void);
 void app_enter_page(struct app_page_data_t *page);
 void app_main_touch_skip(rt_uint8_t event);
+void app_main_set_time(struct tm *time);
+void app_main_get_time(struct tm **time);
 
 /**********************
  * SUB INCLUDE

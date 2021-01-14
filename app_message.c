@@ -329,11 +329,12 @@ static void app_message_txt_design(void)
 {
     struct app_page_data_t *page = g_message_page;
     struct app_msg_private *pdata = (struct app_msg_private *)page->private;
-    clock_time_t *time = &app_main_data->tmr_data;
+    struct tm *time;
     struct app_lvgl_label_design msg_content;
     uint32_t start_x, start_y;
     char *str;
 
+    app_main_get_time(&time);
     g_name.txt = "Claire Dean";
     g_name.ping_pong = 0;
     g_name.font = &lv_font_montserrat_30;
@@ -359,7 +360,7 @@ static void app_message_txt_design(void)
                 "in one square city "
                 "this weekend? It's "
                 "near Bao'an center.%c",
-                time->hour, time->minute, '\0');
+                time->tm_hour, time->tm_min, '\0');
 
     msg_content.txt = str;
     msg_content.ping_pong = 1;

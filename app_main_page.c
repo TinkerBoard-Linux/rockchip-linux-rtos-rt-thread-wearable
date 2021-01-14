@@ -106,15 +106,12 @@ static page_refrsh_request_param_t   clock_refresh_request_param;
 static rt_uint8_t  clock_second_bk = 60;
 void app_main_page_clock_update(void)
 {
-    if (clock_second_bk == app_main_data->tmr_data.second)
+    app_main_get_time(&app_main_data->tmr_data);
+    if (clock_second_bk == app_main_data->tmr_data->tm_sec)
     {
         return;
     }
-    if (app_main_data->tmr_data.tick >= 2)
-    {
-        return;
-    }
-    clock_second_bk = app_main_data->tmr_data.second;
+    clock_second_bk = app_main_data->tmr_data->tm_sec;
 
     app_design_request(0, &clock_design, NULL);
 
