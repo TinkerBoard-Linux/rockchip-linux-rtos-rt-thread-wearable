@@ -519,7 +519,8 @@ static rt_err_t app_message_move_updn_design(void *param)
             app_main_touch_register(&main_page_touch_cb);
             if (main_page_timer_cb[app_main_page->hor_page].cb)
             {
-                app_main_timer_cb_register(main_page_timer_cb[app_main_page->hor_page].cb);
+                app_main_timer_cb_register(main_page_timer_cb[app_main_page->hor_page].cb,
+                                           main_page_timer_cb[app_main_page->hor_page].cycle_ms);
             }
             app_message_page_exit();
             g_refr_param.page = app_main_page;

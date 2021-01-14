@@ -34,7 +34,7 @@
  *
  **************************************************************************************************
  */
-#define APP_TIMER_UPDATE_TICKS      (RT_TICK_PER_SECOND / 10)
+#define APP_TIMER_UPDATE_TICKS      RT_TICK_PER_SECOND
 #define APP_MAGIC_SUM               0x21082108
 /*
  **************************************************************************************************
@@ -152,6 +152,31 @@ static app_clock_cb_t g_timer_cb = {NULL, NULL, 0};
 static app_clock_cb_t g_timer_cb_bak = {NULL, NULL, 0};
 static app_clock_cb_t g_refr_cb = {NULL, NULL, 0};
 
+static void app_job_handler(void *parameter)
+{
+    if (g_timer_cb.cb)
+        g_timer_cb.cb(g_timer_cb.param);
+
+    if (g_timer_cb_bak.cb)
+    {
+        g_timer_cb.cb = g_timer_cb_bak.cb;
+        g_timer_cb.param = g_timer_cb_bak.param;
+        g_timer_cb.timeout = g_timer_cb_bak.timeout;
+
+        g_timer_cb_bak.cb = NULL;
+        g_timer_cb_bak.param = NULL;
+        g_timer_cb_bak.timeout = 0;
+        rt_timer_control(app_main_data->job_timer, RT_TIMER_CTRL_SET_TIME, &g_timer_cb.timeout);
+        rt_timer_start(app_main_data->job_timer);
+    }
+    else
+    {
+        g_timer_cb.cb = NULL;
+        g_timer_cb.param = NULL;
+        g_timer_cb.timeout = 0;
+    }
+}
+
 void app_main_register_timeout_cb(rt_err_t (*cb)(void *param), void *param, uint32_t ms)
 {
     if (g_timer_cb.cb)
@@ -159,14 +184,18 @@ void app_main_register_timeout_cb(rt_err_t (*cb)(void *param), void *param, uint
         g_timer_cb_bak.cb = g_timer_cb.cb;
         g_timer_cb_bak.param = g_timer_cb.param;
         g_timer_cb_bak.timeout = g_timer_cb.timeout;
+        rt_timer_stop(app_main_data->job_timer);
     }
     g_timer_cb.cb = cb;
     g_timer_cb.param = param;
-    g_timer_cb.timeout = ms * (RT_TICK_PER_SECOND / APP_TIMER_UPDATE_TICKS) / 1000;
+    g_timer_cb.timeout = ms * RT_TICK_PER_SECOND / 1000;
+    rt_timer_control(app_main_data->job_timer, RT_TIMER_CTRL_SET_TIME, &g_timer_cb.timeout);
+    rt_timer_start(app_main_data->job_timer);
 }
 
 void app_main_unregister_timeout_cb(void)
 {
+    rt_timer_stop(app_main_data->job_timer);
     g_timer_cb.cb = NULL;
     g_timer_cb.param = NULL;
     g_timer_cb.timeout = 0;
@@ -176,9 +205,23 @@ void app_main_unregister_timeout_cb_if_is(rt_err_t (*cb)(void *param))
 {
     if (g_timer_cb.cb == cb)
     {
+        rt_timer_stop(app_main_data->job_timer);
         g_timer_cb.cb = NULL;
         g_timer_cb.param = NULL;
         g_timer_cb.timeout = 0;
+
+        if (g_timer_cb_bak.cb)
+        {
+            g_timer_cb.cb = g_timer_cb_bak.cb;
+            g_timer_cb.param = g_timer_cb_bak.param;
+            g_timer_cb.timeout = g_timer_cb_bak.timeout;
+
+            g_timer_cb_bak.cb = NULL;
+            g_timer_cb_bak.param = NULL;
+            g_timer_cb_bak.timeout = 0;
+            rt_timer_control(app_main_data->job_timer, RT_TIMER_CTRL_SET_TIME, &g_timer_cb.timeout);
+            rt_timer_start(app_main_data->job_timer);
+        }
     }
 }
 
@@ -187,30 +230,8 @@ static void app_main_timer_tick(void *parameter)
     struct app_main_data_t *pdata = (struct app_main_data_t *)parameter;
 
 #if APP_WDT_ENABLE
-    dw_wdt_set_top(APP_WDT_TIMEOUT);
+    rt_device_control(pdata->wdt_dev, RT_DEVICE_CTRL_WDT_KEEPALIVE, NULL);
 #endif
-    if (g_timer_cb.timeout)
-    {
-        g_timer_cb.timeout--;
-        if (g_timer_cb.timeout == 0 && g_timer_cb.cb)
-        {
-            g_timer_cb.cb(g_timer_cb.param);
-            if (g_timer_cb_bak.cb)
-            {
-                g_timer_cb.cb = g_timer_cb_bak.cb;
-                g_timer_cb.param = g_timer_cb_bak.param;
-                g_timer_cb.timeout = g_timer_cb_bak.timeout;
-
-                g_timer_cb_bak.cb = NULL;
-                g_timer_cb_bak.param = NULL;
-                g_timer_cb_bak.timeout = 0;
-            }
-            else
-            {
-                app_main_register_timeout_cb(NULL, NULL, 0);
-            }
-        }
-    }
 
     if (pdata->timer_cb && pdata->bl_en)
     {
@@ -218,14 +239,18 @@ static void app_main_timer_tick(void *parameter)
     }
 }
 
-void app_main_timer_cb_register(void (*cb)(void))
+void app_main_timer_cb_register(void (*cb)(void), uint32_t ms)
 {
     app_main_data->timer_cb = cb;
+    app_main_data->timer_cycle = ms * RT_TICK_PER_SECOND / 1000;
+    rt_timer_control(app_main_data->clk_timer, RT_TIMER_CTRL_SET_TIME, &app_main_data->timer_cycle);
 }
 
 void app_main_timer_cb_unregister(void)
 {
     app_main_data->timer_cb = RT_NULL;
+    app_main_data->timer_cycle = RT_TICK_PER_SECOND;
+    rt_timer_control(app_main_data->clk_timer, RT_TIMER_CTRL_SET_TIME, &app_main_data->timer_cycle);
 }
 
 /*
@@ -745,7 +770,7 @@ void app_wake_up(void)
         rt_pm_request(1);
         app_main_data->pm_status = APP_PM_RESUME;
 #if APP_WDT_ENABLE
-        dw_wdt_set_top(APP_WDT_TIMEOUT);
+        rt_device_control(app_main_data->wdt_dev, RT_DEVICE_CTRL_WDT_KEEPALIVE, NULL);
 #endif
         rk_imagelib_init();
         rt_pin_write(TOUCH_RST_PIN, PIN_HIGH);
@@ -771,11 +796,11 @@ void app_bmi_isr(void)
 
 static void app_main_set_panel_bl(void *param)
 {
-    uint16_t en = (uint16_t)(uint32_t)param;
+    uint16_t en = !!(uint16_t)(uint32_t)param;
     uint16_t bl;
     rt_err_t ret;
 
-    if (app_main_data->bl_en == !!en)
+    if (app_main_data->bl_en == en)
         return;
 
     if (en)
@@ -980,6 +1005,12 @@ static void app_main_thread(void *p)
                                        app_main_timer_tick, (void *)pdata,
                                        APP_TIMER_UPDATE_TICKS, RT_TIMER_FLAG_PERIODIC | RT_TIMER_FLAG_SOFT_TIMER);
     RT_ASSERT(pdata->clk_timer != RT_NULL);
+    pdata->timer_cycle = APP_TIMER_UPDATE_TICKS;
+
+    pdata->job_timer = rt_timer_create("job_timer",
+                                       app_job_handler, (void *)pdata,
+                                       RT_TICK_PER_SECOND, RT_TIMER_FLAG_ONE_SHOT | RT_TIMER_FLAG_SOFT_TIMER);
+    RT_ASSERT(pdata->job_timer != RT_NULL);
 
     // app init...
     app_lvgl_init(); // last app init
@@ -1008,9 +1039,10 @@ static void app_main_thread(void *p)
 
 #if APP_WDT_ENABLE
     int type = 1;
+    uint32_t timeout = APP_WDT_TIMEOUT;   // in seconds
     pdata->wdt_dev = rt_device_find("dw_wdt");
     rt_device_init(pdata->wdt_dev);
-    dw_wdt_set_top(APP_WDT_TIMEOUT);
+    rt_device_control(pdata->wdt_dev, RT_DEVICE_CTRL_WDT_SET_TIMEOUT, &timeout);
     rt_device_control(pdata->wdt_dev, RT_DEVICE_CTRL_WDT_START, &type);
 #endif
     rt_timer_start(pdata->clk_timer);
@@ -1070,9 +1102,9 @@ static void app_main_thread(void *p)
         last_cmd = mq.cmd;
 
 #if APP_SUSPEND_RESUME_ENABLE
-        if ((app_main_data->bl_en == 0) &&
-                (app_main_data->pm_status == APP_PM_NONE) &&
-                (app_main_data->play_state != PLAYER_STATE_RUNNING))
+        if ((pdata->bl_en == 0) &&
+                (pdata->pm_status == APP_PM_NONE) &&
+                (pdata->play_state != PLAYER_STATE_RUNNING))
         {
             app_play_stop();
 #ifdef POWER_KEY_BANK_PIN
@@ -1083,9 +1115,9 @@ static void app_main_thread(void *p)
             rt_thread_mdelay(200);
             rk_imagelib_deinit();
 #if APP_WDT_ENABLE
-            dw_wdt_set_top(APP_WDT_TIMEOUT);
+            rt_device_control(pdata->wdt_dev, RT_DEVICE_CTRL_WDT_KEEPALIVE, NULL);
 #endif
-            app_main_data->pm_status = APP_PM_SUSPEND;
+            pdata->pm_status = APP_PM_SUSPEND;
             HAL_DCACHE_CleanInvalidate();
             rt_pm_release(1);
         }

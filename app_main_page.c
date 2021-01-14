@@ -60,18 +60,18 @@ app_disp_refrsh_param_t main_page_refrsh_param;
 
 app_main_page_timer_cb_t main_page_timer_cb[CLOCK_HOR_PAGE_MAX] =
 {
-    {RT_NULL,},
-    {app_main_page_clock_update,},
-    {app_main_page_weather_update,},
-    {app_main_page_music_update,},
+    {RT_NULL, 0},
+    {app_main_page_clock_update, 1000},
+    {app_main_page_weather_update, 100},
+    {app_main_page_music_update, 300},
 };
 
 app_main_page_timer_cb_t main_page_leave[CLOCK_HOR_PAGE_MAX] =
 {
-    {RT_NULL,},
-    {RT_NULL,},
-    {RT_NULL,},
-    {app_music_page_leave,},
+    {RT_NULL, 0},
+    {RT_NULL, 0},
+    {RT_NULL, 0},
+    {app_music_page_leave, 0},
 };
 
 /*
@@ -208,7 +208,8 @@ static void page_qrcode_touch_up(void *param)
     app_main_unregister_timeout_cb_if_is(app_show_charging_anim);
     if (main_page_timer_cb[app_main_page->hor_page].cb)
     {
-        app_main_timer_cb_register(main_page_timer_cb[app_main_page->hor_page].cb);
+        app_main_timer_cb_register(main_page_timer_cb[app_main_page->hor_page].cb,
+                                   main_page_timer_cb[app_main_page->hor_page].cycle_ms);
     }
 }
 
@@ -222,7 +223,8 @@ static void page_clock_touch_up(void *param)
     app_main_unregister_timeout_cb_if_is(app_preview_enter);
     if (main_page_timer_cb[app_main_page->hor_page].cb)
     {
-        app_main_timer_cb_register(main_page_timer_cb[app_main_page->hor_page].cb);
+        app_main_timer_cb_register(main_page_timer_cb[app_main_page->hor_page].cb,
+                                   main_page_timer_cb[app_main_page->hor_page].cycle_ms);
     }
 }
 
@@ -235,7 +237,8 @@ static void page_music_touch_up(void *param)
 
     if (main_page_timer_cb[app_main_page->hor_page].cb)
     {
-        app_main_timer_cb_register(main_page_timer_cb[app_main_page->hor_page].cb);
+        app_main_timer_cb_register(main_page_timer_cb[app_main_page->hor_page].cb,
+                                   main_page_timer_cb[app_main_page->hor_page].cycle_ms);
     }
 }
 
@@ -273,7 +276,8 @@ static rt_err_t app_main_page_touch_up(void *param)
     {
         if (main_page_timer_cb[p_page->hor_page].cb)
         {
-            app_main_timer_cb_register(main_page_timer_cb[p_page->hor_page].cb);
+            app_main_timer_cb_register(main_page_timer_cb[app_main_page->hor_page].cb,
+                                       main_page_timer_cb[app_main_page->hor_page].cycle_ms);
         }
     }
 
@@ -318,7 +322,8 @@ static rt_err_t app_main_page_move_lr_design(void *param)
 
         if (main_page_timer_cb[p_page->hor_page].cb)
         {
-            app_main_timer_cb_register(main_page_timer_cb[p_page->hor_page].cb);
+            app_main_timer_cb_register(main_page_timer_cb[app_main_page->hor_page].cb,
+                                       main_page_timer_cb[app_main_page->hor_page].cycle_ms);
         }
         app_main_touch_register(&main_page_touch_cb);
     }
@@ -391,7 +396,8 @@ static rt_err_t app_main_page_move_updn_design(void *param)
         {
             if (main_page_timer_cb[p_page->hor_page].cb)
             {
-                app_main_timer_cb_register(main_page_timer_cb[p_page->hor_page].cb);
+                app_main_timer_cb_register(main_page_timer_cb[app_main_page->hor_page].cb,
+                                           main_page_timer_cb[app_main_page->hor_page].cycle_ms);
             }
             app_main_touch_register(&main_page_touch_cb);
 
@@ -678,7 +684,8 @@ void app_main_page_init(void)
     //register callback
     if (main_page_timer_cb[app_main_page->hor_page].cb)
     {
-        app_main_timer_cb_register(main_page_timer_cb[app_main_page->hor_page].cb);
+        app_main_timer_cb_register(main_page_timer_cb[app_main_page->hor_page].cb,
+                                   main_page_timer_cb[app_main_page->hor_page].cycle_ms);
     }
     app_main_touch_register(&main_page_touch_cb);
 

@@ -350,7 +350,7 @@ void func_heartrate_exit(void)
 void func_heartrate_enter(void *param)
 {
     app_func_show(param);
-    app_main_timer_cb_register(func_heartrate_update);
+    app_main_timer_cb_register(func_heartrate_update, 100);
 }
 
 void func_heartrate_init(void *param)

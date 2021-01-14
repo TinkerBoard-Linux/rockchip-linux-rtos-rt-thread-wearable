@@ -77,10 +77,10 @@
 #define WEATHER_PATH            USERDATA_PATH"weather"
 #define NOTICE_PATH             USERDATA_PATH"notice"
 
-#define APP_WDT_TIMEOUT             300     // ms
+#define APP_WDT_TIMEOUT             2       // s
 #define APP_TIMING_LIGHTOFF_MIN     5       // s
 #define APP_TIMING_LIGHTOFF         30      // s
-#define APP_SUSPEND_RESUME_ENABLE   0
+#define APP_SUSPEND_RESUME_ENABLE   1
 #define APP_SUSPEND_TIMEOUT         1000    // ms
 #define APP_WDT_ENABLE              1
 
@@ -155,7 +155,7 @@ typedef struct
 {
     rt_err_t (*cb)(void *param);
     void *param;
-    uint32_t timeout;
+    int32_t timeout;
 } app_clock_cb_t;
 
 typedef struct
@@ -224,6 +224,7 @@ struct app_main_data_t
     struct tm         *tmr_data;
     void (*timer_cb)(void);
     uint32_t          timer_cycle;
+    rt_timer_t        job_timer;
 
     rt_slist_t        design_list;
     refresh_cb_t      refr[3];
@@ -288,7 +289,7 @@ extern image_info_t img_heart_info;
 
 rt_err_t app_load_img(img_load_info_t *info, rt_uint8_t *pbuf, rt_uint16_t w, rt_uint16_t h, rt_uint16_t offset, rt_uint8_t bitsize);
 
-void app_main_timer_cb_register(void (*cb)(void));
+void app_main_timer_cb_register(void (*cb)(void), uint32_t ms);
 
 void app_main_timer_cb_unregister(void);
 

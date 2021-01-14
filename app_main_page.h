@@ -35,6 +35,7 @@ extern struct app_touch_cb_t main_page_touch_cb;
 typedef struct
 {
     void (*cb)(void);
+    uint32_t cycle_ms;
 } app_main_page_timer_cb_t;
 extern app_main_page_timer_cb_t main_page_timer_cb[CLOCK_HOR_PAGE_MAX];
 

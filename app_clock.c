@@ -148,7 +148,7 @@ struct pre_info
     uint8_t style;
 };
 struct pre_info preInfo = {{{0}, {0}}, 0xff, 0xff};
-static struct rotateimage_st pbg;
+static struct rotateimage_st pbg = {0, 0, 0, 0, 0, NULL};
 static uint8_t *bg_buf = NULL;
 #endif
 

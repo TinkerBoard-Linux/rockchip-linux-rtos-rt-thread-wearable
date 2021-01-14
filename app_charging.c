@@ -67,7 +67,8 @@ static rt_err_t app_charging_anim_design(void *param)
         app_main_touch_register(&main_page_touch_cb);
         if (main_page_timer_cb[app_main_page->hor_page].cb)
         {
-            app_main_timer_cb_register(main_page_timer_cb[app_main_page->hor_page].cb);
+            app_main_timer_cb_register(main_page_timer_cb[app_main_page->hor_page].cb,
+                                       main_page_timer_cb[app_main_page->hor_page].cycle_ms);
         }
 
         app_asr_start();

@@ -83,7 +83,7 @@ static rt_err_t app_preview_touch_up(void *param)
     app_main_touch_unregister();
     app_main_touch_register(&main_page_touch_cb);
 
-    app_main_timer_cb_register(app_main_page_clock_update);
+    app_main_timer_cb_register(app_main_page_clock_update, 1000);
 
     g_refr_param.page = app_main_page;
     g_refr_param.page_num = 1;
