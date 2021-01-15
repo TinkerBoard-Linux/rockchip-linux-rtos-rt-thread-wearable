@@ -335,6 +335,7 @@ void app_main_set_bl_timeout(uint32_t set_time);
 void app_slide_refresh(page_refrsh_request_param_t *param);
 void app_slide_refresh_undo(void);
 void app_enter_page(struct app_page_data_t *page);
+void app_update_page(struct app_page_data_t *page);
 void app_main_touch_skip(rt_uint8_t event);
 void app_main_set_time(struct tm *time);
 void app_main_get_time(struct tm **time);

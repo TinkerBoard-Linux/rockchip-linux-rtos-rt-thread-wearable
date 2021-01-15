@@ -412,6 +412,7 @@ static rt_err_t app_main_page_move_updn_design(void *param)
                 main_page_leave[p_page->hor_page].cb();
             }
             n_page->hor_offset = 0;
+            app_update_page(n_page);
             move_updn_design_refr_param.page = n_page;
             move_updn_design_refr_param.page_num = 1;
             maindata->ver_page = pdata->tar_page;

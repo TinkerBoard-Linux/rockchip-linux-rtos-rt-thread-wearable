@@ -386,6 +386,7 @@ static rt_err_t app_funclist_move_updn_design(void *param)
                                            main_page_timer_cb[app_main_page->hor_page].cycle_ms);
             }
             app_main_data->ver_page = VER_PAGE_NULL;
+            app_update_page(app_main_page);
             g_refr_param.page = app_main_page;
             g_refr_param.page_num = 1;
         }

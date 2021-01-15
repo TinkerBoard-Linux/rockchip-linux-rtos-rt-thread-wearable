@@ -102,6 +102,7 @@ static rt_err_t app_setting_move_lr_design(void *param)
             app_main_touch_register(&app_func_main_touch_cb);
             g_refr_param.page = g_func_page;
             g_refr_param.page_num = 1;
+            app_update_page(g_func_page);
         }
         else
         {
@@ -223,6 +224,7 @@ void app_setting_show(void *param)
     g_refr_param.page = page;
     g_refr_param.page_num = 1;
     app_refresh_request(&g_refr_param);
+    app_update_page(page);
 }
 
 void app_setting_common_exit(void)

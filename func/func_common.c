@@ -107,6 +107,7 @@ static rt_err_t app_func_move_lr_design(void *param)
             app_main_touch_register(&app_funclist_main_touch_cb);
             g_refr_param.page = g_funclist_page;
             g_refr_param.page_num = 1;
+            app_update_page(g_funclist_page);
         }
         else
         {
@@ -280,6 +281,7 @@ void app_func_show(void *param)
         app_alpha_win_show();
     }
 
+    app_update_page(page);
     g_refr_param.page = page;
     g_refr_param.page_num = 1;
     app_refresh_request(&g_refr_param);

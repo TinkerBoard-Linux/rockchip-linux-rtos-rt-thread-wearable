@@ -762,6 +762,11 @@ void app_enter_page(struct app_page_data_t *page)
     app_page_refresh(page, 1, 0);
 }
 
+void app_update_page(struct app_page_data_t *page)
+{
+    app_cur_page = page;
+}
+
 void app_wake_up(void)
 {
 #if APP_SUSPEND_RESUME_ENABLE
@@ -812,6 +817,8 @@ static void app_main_set_panel_bl(void *param)
     if (ret == RT_EOK)
     {
         app_main_data->bl_en = en;
+        if (en == 1)
+            app_enter_page(app_cur_page);
 #if APP_TIMING_LIGHTOFF
         if (app_main_data->bl_time)
         {
