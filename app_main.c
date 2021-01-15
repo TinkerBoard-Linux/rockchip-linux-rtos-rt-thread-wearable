@@ -809,7 +809,10 @@ static void app_main_set_panel_bl(void *param)
         return;
 
     if (en)
+    {
         bl = app_main_data->bl;
+        app_main_page_clock_update();
+    }
     else
         bl = 0;
 
