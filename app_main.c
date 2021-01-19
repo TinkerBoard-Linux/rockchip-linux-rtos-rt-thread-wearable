@@ -811,7 +811,8 @@ static void app_main_set_panel_bl(void *param)
     if (en)
     {
         bl = app_main_data->bl;
-        app_main_page_clock_update();
+        app_main_get_time(&app_main_data->tmr_data);
+        app_main_page_clock_design(NULL);
     }
     else
         bl = 0;

@@ -75,6 +75,7 @@ static rt_err_t app_preview_touch_up(void *param)
     save_app_info(app_main_data);
 
     main_page_design_param_t clock_param = { .buf_id = 1};
+    app_main_get_time(&app_main_data->tmr_data);
     app_clock_init(NULL);
     app_clock_design(&clock_param);
 
@@ -89,6 +90,7 @@ static rt_err_t app_preview_touch_up(void *param)
     g_refr_param.page_num = 1;
     g_refr_param.auto_resize = 0;
     app_refresh_request(&g_refr_param);
+    app_update_page(app_main_page);
 
     return RT_EOK;
 }
@@ -218,6 +220,7 @@ static rt_err_t app_preview_enter_do(void *param)
     g_refr_param.page_num = 1;
     g_refr_param.auto_resize = 0;
     app_refresh_request(&g_refr_param);
+    app_update_page(page);
 
     return RT_EOK;
 }

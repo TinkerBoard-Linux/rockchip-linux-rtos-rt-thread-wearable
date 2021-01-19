@@ -623,6 +623,9 @@ static rt_err_t app_message_touch_down(void *param)
 {
     app_main_unregister_timeout_cb_if_is(app_message_page_show_message);
 
+    app_main_get_time(&app_main_data->tmr_data);
+    app_main_page_clock_design(NULL);
+
     return RT_EOK;
 };
 

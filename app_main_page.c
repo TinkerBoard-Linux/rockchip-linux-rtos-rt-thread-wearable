@@ -261,6 +261,9 @@ static rt_err_t app_main_page_touch_down(void *param)
         page_touch_ops[p_page->hor_page].touch_down(param);
     }
 
+    app_main_get_time(&app_main_data->tmr_data);
+    app_main_page_clock_design(NULL);
+
     return RT_EOK;
 }
 

@@ -282,6 +282,14 @@ static rt_err_t app_funclist_touch_up(void *param)
     return RT_EOK;
 }
 
+static rt_err_t app_funclist_touch_down(void *param)
+{
+    app_main_get_time(&app_main_data->tmr_data);
+    app_main_page_clock_design(NULL);
+
+    return RT_EOK;
+}
+
 //---------------------------------------------------------------------------------
 // touch move lr
 //---------------------------------------------------------------------------------
@@ -481,6 +489,7 @@ struct app_touch_cb_t app_funclist_main_touch_cb =
     .tp_move_lr     = app_funclist_touch_move_lr,
     .tp_move_up     = app_funclist_touch_move_up,
     .tp_touch_up    = app_funclist_touch_up,
+    .tp_touch_down  = app_funclist_touch_down,
 };
 
 /*
