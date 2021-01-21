@@ -666,6 +666,7 @@ static rt_err_t app_message_main_init_design(void *param)
     page->format = RTGRAPHIC_PIXEL_FORMAT_RGB565;
     page->fblen = MSG_WIN_FB_W * MSG_WIN_FB_H * MSG_WIN_COLOR_DEPTH / 8;
     page->private = pdata;
+    page->touch_cb = &app_message_main_touch_cb;
 
     page->fb = pdata->fb[0] = (rt_uint8_t *)rt_malloc_psram(page->fblen);
     pdata->fb[1] = (rt_uint8_t *)rt_malloc_psram(page->fblen);

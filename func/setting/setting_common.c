@@ -250,6 +250,7 @@ void app_setting_common_init(void *param)
     page->vir_w = MENU_WIN_XRES;
     page->ver_offset = 0;
     page->hor_offset = 0;
+    page->touch_cb = &app_setting_main_touch_cb;
 
     title.txt = "Work in process";
     title.ping_pong = 0;

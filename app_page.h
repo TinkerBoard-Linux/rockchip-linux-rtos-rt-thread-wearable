@@ -58,6 +58,7 @@ struct app_page_data_t
     rt_uint32_t hide_win;
 
     // struct app_page_ops_t ops;
+    struct app_touch_cb_t  *touch_cb;
 
     struct app_page_data_t *next;
 

@@ -283,6 +283,7 @@ static rt_err_t app_charging_init_design(void *param)
     g_charging_page[0]->private = pdata;
     g_charging_page[0]->lut = m_bpp_lut;
     g_charging_page[0]->lutsize = sizeof(m_bpp_lut) / sizeof(m_bpp_lut[0]);
+    g_charging_page[0]->touch_cb = &app_charging_touch_cb;
     rt_memcpy(g_charging_page[1], g_charging_page[0], sizeof(struct app_page_data_t));
 
     g_charging_page[0]->h = CHARGING_WIN_YRES;

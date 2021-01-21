@@ -346,6 +346,7 @@ static rt_err_t app_func_init_design(void *param)
     page->format = RTGRAPHIC_PIXEL_FORMAT_RGB565;
     page->private = pdata;
     page->exit_side = EXIT_SIDE_RIGHT;
+    page->touch_cb = &app_func_main_touch_cb;
 
     app_func_set(APP_FUNC_EXERCISE, func_motion_init, NULL, func_motion_enter, NULL, func_motion_exit, NULL);
     app_func_set(APP_FUNC_SETTING, app_func_setting_init, NULL, app_func_setting_enter, NULL, app_func_setting_exit, NULL);

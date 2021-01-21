@@ -545,6 +545,7 @@ static rt_err_t app_funclist_init_design(void *param)
     page->private = pdata;
     page->fblen = FUNC_WIN_FB_W * FUNC_WIN_FB_H * (FUNC_WIN_COLOR_DEPTH >> 3);
     page->fb = pdata->fb = (rt_uint8_t *)rt_malloc_psram(page->fblen);
+    page->touch_cb = &app_funclist_main_touch_cb;
     RT_ASSERT(pdata->fb != RT_NULL);
     rt_memset((void *)pdata->fb, 0x0, page->fblen);
 

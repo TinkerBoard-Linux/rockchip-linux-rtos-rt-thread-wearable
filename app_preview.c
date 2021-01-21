@@ -249,6 +249,9 @@ static rt_err_t app_preview_init_design(void *param)
     page->win_id = APP_CLOCK_WIN_2;
     page->win_layer = WIN_BOTTOM_LAYER;
     page->format = RTGRAPHIC_PIXEL_FORMAT_RGB565;
+    page->touch_cb = &app_preview_main_touch_cb;
+    page->ver_offset = -(DISP_YRES - PREVIEW_WIN_YRES) / 2;
+    page->exit_side = EXIT_SIDE_TOP;
 
     return RT_EOK;
 }

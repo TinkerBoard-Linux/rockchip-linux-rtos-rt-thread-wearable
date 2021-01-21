@@ -262,6 +262,9 @@ struct app_main_data_t
     player_state_t play_state;
     rt_int8_t play_mode;
     rt_int8_t play_vol;
+
+    rt_sem_t wait_sem;
+    rt_uint8_t wait_msc;
 };
 extern struct app_main_data_t *app_main_data;
 extern struct app_info *g_app_info;
@@ -354,6 +357,7 @@ void app_main_get_time(struct tm **time);
 
 #include "app_main_page.h"
 #include "app_clock.h"
+#include "app_dialog.h"
 #include "app_weather.h"
 #include "app_music.h"
 #include "app_qrcode_page.h"

@@ -203,3 +203,57 @@ EXIT:
 }
 
 MSH_CMD_EXPORT(image_dec_test, test);
+
+void dialog_help(char *argv0)
+{
+    rt_kprintf("%s 0|2|4 helloworld\n", argv0);
+    rt_kprintf("%s 1|3|5 93 174 /sdcard/icons/udisk_msc.dta\n", argv0);
+}
+
+void dialog_test_cb(enum dialog_cb_type type)
+{
+    rt_kprintf("%s\n", type == DIALOG_CALLBACK_OK ? "Dialog OK" : "Dialog Cancel");
+}
+
+extern struct app_page_data_t *app_cur_page;
+void dialog_test(int argc, char *argv[])
+{
+    struct dialog_desc desc;
+    int type;
+
+    if (argc < 2)
+    {
+        dialog_help(argv[0]);
+        return;
+    }
+
+    type = atoi(argv[1]);
+    if (type == DIALOG_TEXT_OK_CANCEL ||
+        type == DIALOG_TEXT_OK_ONLY ||
+        type == DIALOG_TEXT_NO_CHECK)
+    {
+        if (argc < 3)
+        {
+            dialog_help(argv[0]);
+            return;
+        }
+        desc.text = argv[2];
+    }
+
+    if (type == DIALOG_IMG_OK_CANCEL ||
+        type == DIALOG_IMG_OK_ONLY ||
+        type == DIALOG_IMG_NO_CHECK)
+    {
+        if (argc < 5)
+        {
+            dialog_help(argv[0]);
+            return;
+        }
+        desc.img.w = atoi(argv[2]);
+        desc.img.h = atoi(argv[3]);
+        desc.img.name = argv[4];
+    }
+    desc.type = type;
+    app_dialog_enter(app_cur_page, &desc, 1, dialog_test_cb);
+}
+MSH_CMD_EXPORT(dialog_test, dialog test);

@@ -633,6 +633,7 @@ static void app_main_page_mem_init(void)
     page->win_layer = WIN_BOTTOM_LAYER;
     page->format = RTGRAPHIC_PIXEL_FORMAT_RGB565;
     page->private = pdata;
+    page->touch_cb = &main_page_touch_cb;
 
     pdata->fb = page->fb;
     pdata->tar_page = VER_PAGE_NULL;

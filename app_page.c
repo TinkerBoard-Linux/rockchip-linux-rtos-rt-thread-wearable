@@ -104,8 +104,11 @@ rt_err_t app_page_refresh(struct app_page_data_t *page, uint8_t page_num, uint8_
             {
                 if (page->ver_offset < -info->height)
                     page->ver_offset = -info->height;
-                y = MAX((-page->ver_offset), (info->height - page->h));
-                h = info->height - y;
+                y = -page->ver_offset;
+                if ((page->h + y) > info->height)
+                    h = info->height - y;
+                else
+                    h = page->h;
             }
         }
         if ((page->ver_offset + MIN(page->h, info->height)) > page->h)
@@ -136,7 +139,7 @@ rt_err_t app_page_refresh(struct app_page_data_t *page, uint8_t page_num, uint8_
         wincfg->w     = MIN(w, info->width);
         wincfg->h     = MIN(h, info->height);
         wincfg->x     = x + ((info->width  > page->w) ? (info->width  - page->w) / 2 : 0);
-        wincfg->y     = y + ((info->height > page->h) ? (info->height - page->h) / 2 : 0);
+        wincfg->y     = y /*+ ((info->height > page->h) ? (info->height - page->h) / 2 : 0)*/;
         wincfg->ylast = wincfg->y;
 
         if (wincfg->h > 0)

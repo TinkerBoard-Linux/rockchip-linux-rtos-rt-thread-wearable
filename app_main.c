@@ -51,7 +51,7 @@
  *
  **************************************************************************************************
  */
-static struct app_page_data_t *app_cur_page = RT_NULL;
+struct app_page_data_t *app_cur_page = RT_NULL;
 struct app_main_data_t *app_main_data = RT_NULL;
 
 RT_UNUSED static const rt_uint8_t month_days[] = {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
@@ -306,7 +306,7 @@ void app_slide_refresh_undo(void)
 void app_main_keep_screen_on(void)
 {
 #if APP_TIMING_LIGHTOFF
-    if (app_main_data->bl_time)
+    if (app_main_data->bl_time && app_main_data->bl_timer)
         rt_timer_start(app_main_data->bl_timer);
 #endif
 }
@@ -810,7 +810,7 @@ void app_bmi_isr(void)
 }
 #endif
 
-static void app_main_set_panel_bl(void *param)
+void app_main_set_panel_bl(void *param)
 {
     uint16_t en = !!(uint16_t)(uint32_t)param;
     uint16_t bl;
@@ -832,7 +832,7 @@ static void app_main_set_panel_bl(void *param)
     if (ret == RT_EOK)
     {
         app_main_data->bl_en = en;
-        if (en == 1)
+        if ((en == 1) && (app_dialog_check() == RT_FALSE))
             app_enter_page(app_cur_page);
 #if APP_TIMING_LIGHTOFF
         if (app_main_data->bl_time)
@@ -1040,6 +1040,7 @@ static void app_main_thread(void *p)
 
     // app init...
     app_lvgl_init(); // last app init
+    app_dialog_init();
     app_main_page_init(); // First app init
     app_message_main_init();
     app_funclist_init();
@@ -1175,26 +1176,4 @@ static int app_main_init(void)
     return RT_EOK;
 }
 
-#ifndef RT_USB_DEVICE_MSTORAGE
 INIT_APP_EXPORT(app_main_init);
-#else
-#ifdef POWER_KEY_PIN
-static void app_gpio_isr2(void *arg)
-{
-    BSP_SetLoaderFlag();
-    rt_hw_cpu_reset();
-}
-
-static int power_key_init(void)
-{
-    uint32_t pin_info = POWER_KEY_BANK_PIN;
-    HAL_GPIO_SetPinsDirection(POWER_KEY_GPIO, POWER_KEY_PIN, GPIO_IN);
-    HAL_PINCTRL_SetParam(POWER_KEY_BANK, POWER_KEY_PIN, PIN_CONFIG_PUL_NORMAL);
-    rt_pin_attach_irq(pin_info, PIN_IRQ_MODE_RISING_FALLING, app_gpio_isr2, NULL);
-    rt_pin_irq_enable(pin_info, PIN_IRQ_ENABLE);
-
-    return 0;
-}
-INIT_APP_EXPORT(power_key_init);
-#endif
-#endif
