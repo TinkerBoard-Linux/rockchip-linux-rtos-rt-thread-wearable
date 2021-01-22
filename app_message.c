@@ -41,6 +41,9 @@
  *
  **************************************************************************************************
  */
+extern lv_font_t lv_font_chnyhei_20;
+void lv_font_chnyhei_20_load_psram();
+void lv_font_chnyhei_20_free_psram(void);
 
 /*
  **************************************************************************************************
@@ -321,6 +324,8 @@ void app_message_page_exit(void)
         pdata->minilogo_buf = NULL;
     }
 
+    lv_font_chnyhei_20_free_psram();
+
     pdata->offset = 0;
     page->fb = pdata->fb[pdata->buf_id];
 }
@@ -335,13 +340,13 @@ static void app_message_txt_design(void)
     char *str;
 
     app_main_get_time(&time);
-    g_name.txt = "Claire Dean";
+    g_name.txt = "隔壁老王";
     g_name.ping_pong = 0;
-    g_name.font = &lv_font_montserrat_30;
+    g_name.font = &lv_font_chnyhei_20;
     g_name.align = LV_LABEL_ALIGN_CENTER;
     g_name.fmt = RTGRAPHIC_PIXEL_FORMAT_RGB565;
     g_name.img[0].width = FUNC_WIN_XRES;
-    g_name.img[0].height = lv_font_montserrat_30.line_height;
+    g_name.img[0].height = lv_font_chnyhei_20.line_height;
     g_name.img[0].stride = FUNC_WIN_XRES * (MSG_WIN_COLOR_DEPTH >> 3);
     if (g_name.img[0].pdata != NULL)
     {
@@ -354,17 +359,16 @@ static void app_message_txt_design(void)
     str = rt_malloc(1024);
     RT_ASSERT(str != NULL);
     rt_snprintf(str, 1024,
-                "%02d:%02d\n"
-                "Do you have time to "
-                "watch an IMAX movie "
-                "in one square city "
-                "this weekend? It's "
-                "near Bao'an center.%c",
+                "\n%02d:%02d\n"
+                "Hello，老王！"
+                "我家水管坏了，"
+                "您能过来帮我修一下吗？\n "
+                "Thanks！！！",
                 time->tm_hour, time->tm_min, '\0');
 
     msg_content.txt = str;
     msg_content.ping_pong = 1;
-    msg_content.font = &lv_font_montserrat_30;
+    msg_content.font = &lv_font_chnyhei_20;
     msg_content.align = LV_LABEL_ALIGN_CENTER;
     msg_content.fmt = RTGRAPHIC_PIXEL_FORMAT_RGB565;
     msg_content.img[1].width = msg_content.img[0].width = MSG_WIN_FB_W - 20;
@@ -413,6 +417,8 @@ rt_err_t app_message_page_new_message(void *param)
     img_load_info.h = MSG_LOGO_SMALL_H;
     img_load_info.name = ICONS_PATH"/WhatsApp_64x64.dta";
     app_load_img(&img_load_info, pdata->minilogo_buf, MSG_LOGO_SMALL_W, MSG_LOGO_SMALL_H, 0, 2);
+
+    lv_font_chnyhei_20_load_psram();
 
     app_message_txt_design();
 
