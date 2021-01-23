@@ -397,6 +397,8 @@ static rt_err_t app_funclist_move_updn_design(void *param)
             app_update_page(app_main_page);
             g_refr_param.page = app_main_page;
             g_refr_param.page_num = 1;
+            page->hor_offset = 0;
+            page->hor_page = 0;
         }
         else
         {
