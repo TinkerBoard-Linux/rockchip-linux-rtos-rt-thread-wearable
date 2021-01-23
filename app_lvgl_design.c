@@ -67,6 +67,7 @@ rt_err_t lv_clock_img_file_load(lv_img_dsc_t *img_dsc, const char *file)
     if (res != LV_RES_OK)
     {
         rt_kprintf("%s open failed\n", file);
+        img_dsc->data = NULL;
         return -RT_ERROR;
     }
 
@@ -110,6 +111,8 @@ rt_err_t lv_clock_img_file_load(lv_img_dsc_t *img_dsc, const char *file)
 
 void lv_clock_img_dsc_free(lv_img_dsc_t *img_dsc)
 {
+    if (img_dsc->data == NULL)
+        return;
 #if IMG_USING_DEFAULT_HEAP
     if (RT_PSRAM_MALLOC_THRRESH > img_dsc->data_size)
     {
