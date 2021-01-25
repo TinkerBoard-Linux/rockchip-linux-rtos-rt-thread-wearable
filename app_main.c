@@ -585,6 +585,7 @@ void app_main_touch_register(struct app_touch_cb_t *tcb)
 void app_design_request(rt_uint8_t urgent, design_cb_t *design, void *param)
 {
     register rt_base_t level;
+    int retry = 5;
     rt_err_t ret;
 
     struct app_main_data_t *pdata = app_main_data;
@@ -602,7 +603,15 @@ void app_design_request(rt_uint8_t urgent, design_cb_t *design, void *param)
     rt_hw_interrupt_enable(level);
 
     clock_app_mq_t mq = {MQ_DESIGN_UPDATE, param};
+SEND_RETRY:
     ret = rt_mq_send(pdata->mq, &mq, sizeof(clock_app_mq_t));
+    if ((ret == -RT_EFULL) && (retry > 0))
+    {
+        rt_kprintf("WARNING: Queue full %d\n", retry);
+        rt_thread_mdelay(10);
+        retry--;
+        goto SEND_RETRY;
+    }
     RT_ASSERT(ret != -RT_ERROR);
 }
 
