@@ -1057,6 +1057,7 @@ static void app_main_thread(void *p)
     {
         rt_thread_mdelay(1);
     }
+    rt_thread_mdelay(100);
     /* Make sure the first dta source is loaded after here */
 #endif
 
