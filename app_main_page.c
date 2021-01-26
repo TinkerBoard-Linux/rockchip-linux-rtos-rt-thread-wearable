@@ -645,21 +645,6 @@ void app_main_page_init(void)
 
     app_main_page->hor_page = CLOCK_PAGE_FOC_ID;
     app_main_page->hor_offset = app_main_page->hor_page * app_main_page->hor_step;
-
-#ifdef RT_USING_SDIO0
-    rt_device_t sd_dev;
-    do
-    {
-        sd_dev = rt_device_find("sd0");
-        rt_thread_mdelay(1);
-    }
-    while (!sd_dev);
-    while (dfs_filesystem_get_mounted_path(sd_dev) == NULL)
-    {
-        rt_thread_mdelay(1);
-    }
-    /* Make sure the first dta source is loaded after here */
-#endif
     get_app_info(app_main_data);
     rt_display_backlight_set(app_main_data->bl);
 

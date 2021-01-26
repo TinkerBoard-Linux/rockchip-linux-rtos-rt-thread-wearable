@@ -27,6 +27,9 @@
 #include "board.h"
 #include "hal_bsp.h"
 
+#ifdef RT_USING_USB_DEVICE
+#include "drv_usbd.h"
+#endif
 /*
  **************************************************************************************************
  *
@@ -1041,6 +1044,54 @@ static void app_main_thread(void *p)
     // app init...
     app_lvgl_init(); // last app init
     app_dialog_init();
+
+#ifdef RT_USING_SDIO0
+    rt_device_t sd_dev;
+    do
+    {
+        sd_dev = rt_device_find("sd0");
+        rt_thread_mdelay(1);
+    }
+    while (!sd_dev);
+    while (dfs_filesystem_get_mounted_path(sd_dev) == NULL)
+    {
+        rt_thread_mdelay(1);
+    }
+    /* Make sure the first dta source is loaded after here */
+#endif
+
+#ifdef RT_USB_DEVICE_MSTORAGE
+    pdata->wait_sem = rt_sem_create("waitmsc", 0, RT_IPC_FLAG_PRIO);
+    RT_ASSERT(pdata->wait_sem != RT_NULL);
+    pdata->wait_msc = RT_FALSE;
+
+    switch (usb_get_bc_info())
+    {
+    case PCD_BCD_STD_DOWNSTREAM_PORT:
+    {
+        struct dialog_desc desc;
+        rt_kprintf("PCD_BCD_STD_DOWNSTREAM_PORT\n");
+        desc.type = DIALOG_IMG_NO_CHECK;
+        desc.img.w = 93;
+        desc.img.h = 174;
+        desc.img.name = ICONS_PATH"/udisk_msc.dta";
+        app_dialog_enter(NULL, &desc, 1, NULL);
+        pdata->wait_msc = RT_TRUE;
+        rt_sem_take(pdata->wait_sem, RT_WAITING_FOREVER);
+        app_dialog_exit(DIALOG_CALLBACK_NONE);
+        break;
+    }
+    case PCD_BCD_DEDICATED_CHARGING_PORT:
+        rt_kprintf("PCD_BCD_DEDICATED_CHARGING_PORT\n");
+        break;
+    case PCD_BCD_DEFAULT_STATE:
+        rt_kprintf("PCD_BCD_DEFAULT_STATE\n");
+        break;
+    default:
+        break;
+    }
+#endif
+
     app_main_page_init(); // First app init
     app_message_main_init();
     app_funclist_init();
