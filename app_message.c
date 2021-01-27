@@ -78,6 +78,7 @@ struct image_st g_pre_tips = {0, 0, 0, NULL};
 struct image_st g_pre_area[2] = {{0, 0, 0, NULL}, {0, 0, 0, NULL}};
 struct image_st g_pre_txt[2] = {{0, 0, 0, NULL}, {0, 0, 0, NULL}};
 static page_refrsh_request_param_t g_refr_param;
+static int anim_pause = 0;
 
 static rt_err_t app_lv_new_message_design(void *param);
 design_cb_t lv_new_message_design_t = {.cb = app_lv_new_message_design,};
@@ -85,13 +86,12 @@ static rt_err_t app_lv_new_message_design(void *param)
 {
     struct app_page_data_t *page = g_message_page;
     struct app_msg_private *pdata = (struct app_msg_private *)page->private;
-    struct app_main_data_t *maindata = app_main_data;
     struct image_st ips, ipd;
     uint32_t start_x, start_y;
     rt_uint8_t buf_id;
     rt_uint8_t *fb;
 
-    if (maindata->touch_event != RT_TOUCH_EVENT_UP)
+    if (anim_pause)
         return RT_EOK;
 
     buf_id = (pdata->buf_id == 1) ? 0 : 1;
@@ -141,7 +141,6 @@ static rt_err_t app_lv_new_message_design(void *param)
     scale_index++;
     if (scale_index > MSG_ANIM_STEP)
     {
-        scale_index = 0;
         app_main_register_timeout_cb(app_message_page_show_message, NULL, 1500);
     }
     else
@@ -162,13 +161,12 @@ static rt_err_t app_lv_show_message_design(void *param)
 {
     struct app_page_data_t *page = g_message_page;
     struct app_msg_private *pdata = (struct app_msg_private *)page->private;
-    struct app_main_data_t *maindata = app_main_data;
     struct image_st ips, ipd;
     uint32_t start_x, start_y;
     rt_uint8_t buf_id;
     rt_uint8_t *fb;
 
-    if (maindata->touch_event != RT_TOUCH_EVENT_UP)
+    if (anim_pause)
     {
         if (mov_index == MSG_ANIM_STEP)
             mov_index--;
@@ -240,8 +238,10 @@ static rt_err_t app_lv_show_message_design(void *param)
     mov_index--;
     if (mov_index < 0)
     {
+        scale_index = 0;
         mov_index = MSG_ANIM_STEP;
-        pdata->msg_cnt--;
+        if (pdata->msg_cnt)
+            pdata->msg_cnt--;
         app_asr_start();
     }
     else
@@ -258,13 +258,27 @@ static rt_err_t app_lv_show_message_design(void *param)
 
 rt_err_t app_message_anim_continue(void)
 {
-    if (scale_index != 0)
+    struct app_page_data_t *page = g_message_page;
+    struct app_msg_private *pdata = (struct app_msg_private *)page->private;
+
+    if (!pdata->msg_cnt)
+        return -RT_ERROR;
+
+    if (scale_index > MSG_ANIM_STEP && mov_index == MSG_ANIM_STEP)
     {
+        anim_pause = 0;
+        app_main_register_timeout_cb(app_message_page_show_message, NULL, 1500);
+        return RT_EOK;
+    }
+    if (scale_index <= MSG_ANIM_STEP)
+    {
+        anim_pause = 0;
         app_design_request(0, &lv_new_message_design_t, RT_NULL);
         return RT_EOK;
     }
     if (mov_index != MSG_ANIM_STEP)
     {
+        anim_pause = 0;
         app_design_request(0, &lv_show_message_design_t, RT_NULL);
         return RT_EOK;
     }
@@ -393,6 +407,7 @@ rt_err_t app_message_page_new_message(void *param)
 
     // pdata->msg_cnt++;
     pdata->msg_cnt = 1;
+    anim_pause = 0;
 
     pdata->offset = 0;
     page->fb = pdata->fb[pdata->buf_id];
@@ -628,6 +643,7 @@ static rt_err_t app_message_touch_up(void *param)
 static rt_err_t app_message_touch_down(void *param)
 {
     app_main_unregister_timeout_cb_if_is(app_message_page_show_message);
+    anim_pause = 1;
 
     app_main_get_time(&app_main_data->tmr_data);
     app_main_page_clock_design(NULL);
