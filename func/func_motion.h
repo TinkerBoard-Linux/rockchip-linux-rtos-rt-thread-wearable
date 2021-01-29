@@ -15,8 +15,6 @@
  *
  **************************************************************************************************
  */
-void func_motion_init(void *param);
-void func_motion_enter(void *param);
-void func_motion_exit(void);
+extern struct app_func func_motion_ops;
 
 #endif

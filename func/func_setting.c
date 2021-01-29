@@ -170,3 +170,10 @@ void app_func_setting_init(void *param)
 
     app_func_set_preview(APP_FUNC_SETTING, page->fb);
 }
+
+struct app_func func_setting_ops =
+{
+    .init = app_func_setting_init,
+    .enter = app_func_setting_enter,
+    .exit = app_func_setting_exit,
+};

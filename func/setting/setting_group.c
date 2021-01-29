@@ -8,18 +8,40 @@
 
 struct app_func app_setting_group[APP_SETTING_COMMON + 1] = {NULL};
 
-void app_setting_set(enum app_setting_e index,
-                     void (*init)(void *param),
-                     void *init_param,
-                     void (*enter)(void *param),
-                     void *param,
-                     void (*exit)(void))
+void app_setting_set(enum app_setting_e index, struct app_func *ops)
 {
-    app_setting_group[index].init = init;
-    app_setting_group[index].init_param = init_param;
-    app_setting_group[index].enter = enter;
-    app_setting_group[index].param = param;
-    app_setting_group[index].exit = exit;
+    app_setting_group[index].init = ops->init;
+    app_setting_group[index].init_param = ops->init_param;
+    app_setting_group[index].enter = ops->enter;
+    app_setting_group[index].param = ops->param;
+    app_setting_group[index].exit = ops->exit;
+    app_setting_group[index].pause = ops->pause;
+    app_setting_group[index].resume = ops->resume;
+    app_setting_group[index].pre_view = ops->pre_view;
+}
+
+void app_setting_pause(enum app_setting_e index)
+{
+    if (app_setting_group[index].paused == 1)
+        return;
+
+    app_setting_group[index].paused = 1;
+    if (app_setting_group[index].pause)
+    {
+        app_setting_group[index].pause();
+    }
+}
+
+void app_setting_resume(enum app_setting_e index)
+{
+    if (app_setting_group[index].paused == 0)
+        return;
+
+    app_setting_group[index].paused = 0;
+    if (app_setting_group[index].resume)
+    {
+        app_setting_group[index].resume();
+    }
 }
 
 void app_setting_exit(enum app_setting_e index)
@@ -43,6 +65,7 @@ void app_setting_enter(enum app_setting_e index)
     struct app_page_data_t *page = g_setting_page;
     struct app_setting_private *pdata = page->private;
 
+    app_setting_group[index].paused = 0;
     if (app_setting_group[index].enter)
     {
         app_setting_group[index].enter(app_setting_group[index].param);

@@ -414,3 +414,10 @@ void func_heartrate_init(void *param)
 
     app_func_set_preview(APP_FUNC_HEARTRATE, page->fb);
 }
+
+struct app_func func_heartrate_ops =
+{
+    .init = func_heartrate_init,
+    .enter = func_heartrate_enter,
+    .exit = func_heartrate_exit,
+};

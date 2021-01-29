@@ -15,8 +15,6 @@
  *
  **************************************************************************************************
  */
-void func_backlight_init(void *param);
-void func_backlight_enter(void *param);
-void func_backlight_exit(void);
+extern struct app_func func_backlight_ops;
 
 #endif

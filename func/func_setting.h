@@ -15,8 +15,6 @@
  *
  **************************************************************************************************
  */
-void app_func_setting_init(void *param);
-void app_func_setting_enter(void *param);
-void app_func_setting_exit(void);
+extern struct app_func func_setting_ops;
 
 #endif

@@ -24,7 +24,8 @@ extern struct app_func app_setting_group[];
 void app_setting_init(enum app_setting_e index);
 void app_setting_enter(enum app_setting_e index);
 void app_setting_exit(enum app_setting_e index);
-void app_setting_set(enum app_setting_e index, void (*init)(void *param), void *init_param,
-                     void (*enter)(void *param), void *param, void (*exit)(void));
+void app_setting_pause(enum app_setting_e index);
+void app_setting_resume(enum app_setting_e index);
+void app_setting_set(enum app_setting_e index, struct app_func *ops);
 
 #endif

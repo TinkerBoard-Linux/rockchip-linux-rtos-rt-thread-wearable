@@ -44,15 +44,19 @@ struct app_func
     void *param;
     void (*exit)(void);
     void *pre_view;
+    void (*pause)(void);
+    void (*resume)(void);
+    uint8_t paused;
 };
 extern struct app_func app_func_group[];
 
 void app_func_init(enum app_func_e index);
 void app_func_enter(enum app_func_e index);
 void app_func_exit(enum app_func_e index);
+void app_func_pause(enum app_func_e index);
+void app_func_resume(enum app_func_e index);
 void app_func_set_preview(enum app_func_e index, void *pre_view);
 void *app_func_get_preview(enum app_func_e index);
-void app_func_set(enum app_func_e index, void (*init)(void *param), void *init_param,
-                  void (*enter)(void *param), void *param, void (*exit)(void), void *pre_view);
+void app_func_set(enum app_func_e index, struct app_func *ops);
 
 #endif

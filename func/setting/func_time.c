@@ -331,3 +331,10 @@ void func_time_set_exit(void)
     lv_obj_clean_style_list(obj_main, LV_STATE_DEFAULT);
     lv_obj_del(obj_main);
 }
+
+struct app_func func_time_ops =
+{
+    .init = func_time_set_init,
+    .enter = func_time_set_enter,
+    .exit = func_time_set_exit,
+};

@@ -111,6 +111,7 @@ static rt_err_t app_func_move_lr_design(void *param)
         }
         else
         {
+            app_func_resume(pdata->func_id);
             g_refr_param.page = page;
             g_refr_param.page_num = 1; // + pdata->alpha_win;
         }
@@ -131,9 +132,11 @@ static rt_err_t app_func_move_lr_design(void *param)
 
 static rt_err_t app_func_touch_move_lr(void *param)
 {
-    struct app_main_data_t  *pdata = (struct app_main_data_t *)param;
+    struct app_main_data_t *pdata = (struct app_main_data_t *)param;
     struct app_page_data_t *page = g_func_page;
+    struct app_func_private *priv_data = page->private;
 
+    app_func_pause(priv_data->func_id);
     page->hor_offset = -pdata->xoffset;
     if (page->hor_offset > page->vir_w)
         page->hor_offset = page->vir_w;
@@ -327,6 +330,13 @@ void app_func_common_init(void *param)
     app_func_set_preview(APP_FUNC_COMMON, page->fb);
 }
 
+struct app_func func_common_ops =
+{
+    .init = app_func_common_init,
+    .enter = app_func_show,
+    .exit = app_func_common_exit,
+};
+
 static rt_err_t app_func_init_design(void *param)
 {
     struct app_page_data_t *page;
@@ -348,10 +358,10 @@ static rt_err_t app_func_init_design(void *param)
     page->exit_side = EXIT_SIDE_RIGHT;
     page->touch_cb = &app_func_main_touch_cb;
 
-    app_func_set(APP_FUNC_EXERCISE, func_motion_init, NULL, func_motion_enter, NULL, func_motion_exit, NULL);
-    app_func_set(APP_FUNC_SETTING, app_func_setting_init, NULL, app_func_setting_enter, NULL, app_func_setting_exit, NULL);
-    app_func_set(APP_FUNC_COMMON, app_func_common_init, NULL, app_func_show, NULL, app_func_common_exit, NULL);
-    app_func_set(APP_FUNC_HEARTRATE, func_heartrate_init, NULL, func_heartrate_enter, NULL, func_heartrate_exit, NULL);
+    app_func_set(APP_FUNC_EXERCISE, &func_motion_ops);
+    app_func_set(APP_FUNC_SETTING, &func_setting_ops);
+    app_func_set(APP_FUNC_COMMON, &func_common_ops);
+    app_func_set(APP_FUNC_HEARTRATE, &func_heartrate_ops);
 
     return RT_EOK;
 }

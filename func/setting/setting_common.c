@@ -106,6 +106,7 @@ static rt_err_t app_setting_move_lr_design(void *param)
         }
         else
         {
+            app_setting_resume(pdata->setting_id);
             g_refr_param.page = page;
             g_refr_param.page_num = 1;
         }
@@ -126,9 +127,11 @@ static rt_err_t app_setting_move_lr_design(void *param)
 
 static rt_err_t app_setting_touch_move_lr(void *param)
 {
-    struct app_main_data_t  *pdata = (struct app_main_data_t *)param;
+    struct app_main_data_t *pdata = (struct app_main_data_t *)param;
     struct app_page_data_t *page = g_setting_page;
+    struct app_setting_private *priv_data = page->private;
 
+    app_setting_pause(priv_data->setting_id);
     page->hor_offset = -pdata->xoffset;
     if (page->hor_offset > page->vir_w)
         page->hor_offset = page->vir_w;
@@ -264,6 +267,13 @@ void app_setting_common_init(void *param)
     app_lv_label_design(&title);
 }
 
+struct app_func setting_common_ops =
+{
+    .init = app_setting_common_init,
+    .enter = app_setting_show,
+    .exit = app_setting_common_exit,
+};
+
 static rt_err_t app_setting_init_design(void *param)
 {
     struct app_page_data_t *page;
@@ -284,9 +294,9 @@ static rt_err_t app_setting_init_design(void *param)
     page->private = pdata;
     page->exit_side = EXIT_SIDE_RIGHT;
 
-    app_setting_set(APP_SETTING_COMMON, app_setting_common_init, NULL, app_setting_show, NULL, app_setting_common_exit);
-    app_setting_set(APP_SETTING_BACKLIGHT, func_backlight_init, NULL, func_backlight_enter, NULL, func_backlight_exit);
-    app_setting_set(APP_SETTING_TIME, func_time_set_init, NULL, func_time_set_enter, NULL, func_time_set_exit);
+    app_setting_set(APP_SETTING_COMMON, &setting_common_ops);
+    app_setting_set(APP_SETTING_BACKLIGHT, &func_backlight_ops);
+    app_setting_set(APP_SETTING_TIME, &func_time_ops);
 
     return RT_EOK;
 }

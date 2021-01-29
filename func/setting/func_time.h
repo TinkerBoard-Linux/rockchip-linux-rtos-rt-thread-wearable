@@ -15,8 +15,6 @@
  *
  **************************************************************************************************
  */
-void func_time_set_init(void *param);
-void func_time_set_enter(void *param);
-void func_time_set_exit(void);
+extern struct app_func func_time_ops;
 
 #endif

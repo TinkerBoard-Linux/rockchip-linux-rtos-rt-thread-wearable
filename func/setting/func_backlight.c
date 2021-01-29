@@ -336,3 +336,10 @@ void func_backlight_exit(void)
     lv_obj_del(obj_main);
     save_app_info(app_main_data);
 }
+
+struct app_func func_backlight_ops =
+{
+    .init = func_backlight_init,
+    .enter = func_backlight_enter,
+    .exit = func_backlight_exit,
+};

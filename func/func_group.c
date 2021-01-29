@@ -9,20 +9,40 @@
 struct app_func app_func_group[APP_FUNC_COMMON + 1] = {NULL};
 static int music_pause;
 
-void app_func_set(enum app_func_e index,
-                  void (*init)(void *param),
-                  void *init_param,
-                  void (*enter)(void *param),
-                  void *param,
-                  void (*exit)(void),
-                  void *pre_view)
+void app_func_set(enum app_func_e index, struct app_func *ops)
 {
-    app_func_group[index].init = init;
-    app_func_group[index].init_param = init_param;
-    app_func_group[index].enter = enter;
-    app_func_group[index].param = param;
-    app_func_group[index].exit = exit;
-    app_func_group[index].pre_view = pre_view;
+    app_func_group[index].init = ops->init;
+    app_func_group[index].init_param = ops->init_param;
+    app_func_group[index].enter = ops->enter;
+    app_func_group[index].param = ops->param;
+    app_func_group[index].exit = ops->exit;
+    app_func_group[index].pause = ops->pause;
+    app_func_group[index].resume = ops->resume;
+    app_func_group[index].pre_view = ops->pre_view;
+}
+
+void app_func_pause(enum app_func_e index)
+{
+    if (app_func_group[index].paused == 1)
+        return;
+
+    app_func_group[index].paused = 1;
+    if (app_func_group[index].pause)
+    {
+        app_func_group[index].pause();
+    }
+}
+
+void app_func_resume(enum app_func_e index)
+{
+    if (app_func_group[index].paused == 0)
+        return;
+
+    app_func_group[index].paused = 0;
+    if (app_func_group[index].resume)
+    {
+        app_func_group[index].resume();
+    }
 }
 
 void app_func_set_preview(enum app_func_e index, void *pre_view)
@@ -62,6 +82,7 @@ void app_func_enter(enum app_func_e index)
     struct app_page_data_t *page = g_func_page;
     struct app_func_private *pdata = page->private;
 
+    app_func_group[index].paused = 0;
     if (app_func_group[index].enter)
     {
         app_func_group[index].enter(app_func_group[index].param);
