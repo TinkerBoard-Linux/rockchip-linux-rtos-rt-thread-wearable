@@ -22,6 +22,7 @@
 #define LV_FB_H             LV_VER_RES
 #define LV_FB_COLOR_DEPTH   LV_COLOR_DEPTH
 
+static rt_uint8_t  thread_flag = 0;
 static rt_thread_t thread;
 static rt_event_t  disp_event;
 static lv_style_t  main_style;
@@ -258,11 +259,38 @@ static void lv_lcd_flush(void)
  */
 static void lv_time_set_thread(void *p)
 {
+    /* Creat event for lcd display */
+    disp_event = rt_event_create("bl_event", RT_IPC_FLAG_FIFO);
+    RT_ASSERT(disp_event != RT_NULL);
+
+    /* register lvgl send lcd I/F */
+    rtlvgl_fb_monitor_cb_register(lv_lcd_flush);
+
+    /* Re-register touch process for lvgl using */
+    rt_touchpanel_block_unregister(&app_main_data->touch_block);
+
+    lv_touch_block_init(&lv_touch_block);
+    rt_touchpanel_block_register(&lv_touch_block);
+
     while (1)
     {
         rt_thread_mdelay(10);
         lv_task_handler();
+
+        if (thread_flag)
+        {
+            break;
+        }
     }
+
+    rtlvgl_fb_monitor_cb_unregister(lv_lcd_flush);
+    rt_event_delete(disp_event);
+
+    lv_time_set_done();
+    lv_obj_clean_style_list(obj_hour, LV_STATE_DEFAULT);
+    lv_obj_clean_style_list(obj_min, LV_STATE_DEFAULT);
+    lv_obj_clean_style_list(obj_main, LV_STATE_DEFAULT);
+    lv_obj_del(obj_main);
 }
 
 /*
@@ -274,23 +302,11 @@ static void lv_time_set_thread(void *p)
  */
 void func_time_set_enter(void *param)
 {
-    /* register lvgl send lcd I/F */
-    rtlvgl_fb_monitor_cb_register(lv_lcd_flush);
-
-    /* Re-register touch process for lvgl using */
-    rt_touchpanel_block_unregister(&app_main_data->touch_block);
-
-    lv_touch_block_init(&lv_touch_block);
-    rt_touchpanel_block_register(&lv_touch_block);
-
     /* Re-register touch process for common using */
     app_setting_show(param);
 
-    /* Creat event for lcd display */
-    disp_event = rt_event_create("bl_event", RT_IPC_FLAG_FIFO);
-    RT_ASSERT(disp_event != RT_NULL);
-
     /* Creat thread for lvgl task running */
+    thread_flag = 0;
     thread = rt_thread_create("functime", lv_time_set_thread, RT_NULL, 2048, 5, 10);
     RT_ASSERT(thread != RT_NULL);
     rt_thread_startup(thread);
@@ -317,19 +333,19 @@ void func_time_set_init(void *param)
 
 void func_time_set_exit(void)
 {
-    rt_thread_delete(thread);
-
-    rtlvgl_fb_monitor_cb_unregister(lv_lcd_flush);
-    rt_event_delete(disp_event);
-
     rt_touchpanel_block_unregister(&lv_touch_block);
     rt_touchpanel_block_register(&app_main_data->touch_block);
+    thread_flag = 1;
+}
 
-    lv_time_set_done();
-    lv_obj_clean_style_list(obj_hour, LV_STATE_DEFAULT);
-    lv_obj_clean_style_list(obj_min, LV_STATE_DEFAULT);
-    lv_obj_clean_style_list(obj_main, LV_STATE_DEFAULT);
-    lv_obj_del(obj_main);
+void func_time_set_pause(void)
+{
+    rtlvgl_fb_monitor_cb_unregister(lv_lcd_flush);
+}
+
+void func_time_set_resume(void)
+{
+    rtlvgl_fb_monitor_cb_register(lv_lcd_flush);    
 }
 
 struct app_func func_time_ops =
@@ -337,4 +353,6 @@ struct app_func func_time_ops =
     .init = func_time_set_init,
     .enter = func_time_set_enter,
     .exit = func_time_set_exit,
+    .pause = func_time_set_pause,
+    .resume = func_time_set_resume,
 };
