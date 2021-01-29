@@ -455,10 +455,11 @@ static rt_err_t app_digital_clock_style0_design(void *param)
     rt_uint8_t  *fb   = par->pdata;
     rt_uint32_t vir_w = par->stride / format2depth[par->format];
     struct tm *time   = app_main_data->tmr_data;
-    //rt_int8_t    style_id = app_main_data->clock_style;
+    rt_int8_t    style_id = app_main_data->clock_style;
     rt_uint16_t  startx, deltax, xoffset  = 0;
     rt_uint16_t  starty, deltay, yoffset  = 0;
     image_info_t *img_info = NULL;
+    preInfo.style = style_id;
 
     starty = 0;
     startx = (watch_bg.w - (watch_num_l_num_info[0].w * 2 + watch_num_dot.w + watch_num_s_num_info[0].w * 2)) / 2;
