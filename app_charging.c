@@ -90,6 +90,8 @@ static rt_err_t app_charging_anim_design(void *param)
         m_bpp_lut[i] = pdata->anim_lut[lut_index][i];
     }
 
+    uint32_t dec_s, dec_e;
+    dec_s = HAL_GetTick();
     dec_size = CHARGING_WIN_FB_W * CHARGING_WIN_FB_H;
     if (!g_first_dta)
     {
@@ -102,6 +104,7 @@ static rt_err_t app_charging_anim_design(void *param)
         memset(fb, 0x0, dec_size);
         g_first_dta = 0;
     }
+    dec_e = HAL_GetTick();
 
 #if SHOW_TICK
     et = HAL_GetTick();
@@ -121,7 +124,10 @@ static rt_err_t app_charging_anim_design(void *param)
         algo_t = 0;
 #endif
     }
-    rt_thread_mdelay(20);
+    if ((dec_e - dec_s) < 30)
+    {
+        rt_thread_mdelay(30 - (dec_e - dec_s));
+    }
 
     pdata->buf_id = buf_id;
 
