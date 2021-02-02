@@ -928,7 +928,7 @@ void app_main_set_bl_timeout(uint32_t set_time)
 
 void set_bl(int argc, char *argv[])
 {
-    int bl = -1;
+    uint8_t bl = 0xFF;
     int to = -1;
 
     if (argc < 3)
@@ -950,18 +950,20 @@ void set_bl(int argc, char *argv[])
             argc--;
             argv++;
             if (*argv)
-                bl = atoi(*argv);
+                bl = (uint8_t)atoi(*argv);
         }
         argc--;
         argv++;
     }
 
-    if (bl != -1)
+    if (bl != 0xFF)
     {
+        if (bl > 100)
+            bl = 100;
         rt_kprintf("Set backlight level %d\n", bl);
-        clock_app_mq_t mq = {MQ_BACKLIGHT_SWITCH, (void *)bl};
-        rt_err_t ret = rt_mq_send(app_main_data->mq, &mq, sizeof(clock_app_mq_t));
-        RT_ASSERT(ret != -RT_ERROR);
+        app_main_data->bl = bl;
+        app_main_set_panel_bl((void *)1);
+        rt_display_backlight_set(bl);
     }
     if (to != -1)
     {
