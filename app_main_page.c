@@ -319,7 +319,9 @@ static rt_err_t app_main_page_move_lr_design(void *param)
             {
                 p_page->hor_page -= CLOCK_HOR_PAGE_MAX;
             }
+#if (APP_PSRAM_END_RESERVE > 0)
             g_app_info->page_index = p_page->hor_page;
+#endif
         }
         p_page->hor_offset = p_page->hor_page * p_page->hor_step;
 

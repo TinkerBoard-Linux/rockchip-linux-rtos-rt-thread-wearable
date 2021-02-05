@@ -84,6 +84,12 @@
 #define APP_SUSPEND_TIMEOUT         1000    // ms
 #define APP_WDT_ENABLE              1
 
+#ifdef RT_PSRAM_END_RESERVE
+#define APP_PSRAM_END_RESERVE   RT_PSRAM_END_RESERVE
+#else
+#define APP_PSRAM_END_RESERVE   0
+#endif
+
 enum app_play_mode
 {
     APP_PLAY_LIST = 1,

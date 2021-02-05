@@ -56,10 +56,12 @@ struct app_main_data_t *app_main_data = RT_NULL;
 
 RT_UNUSED static const rt_uint8_t month_days[] = {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
+#if (APP_PSRAM_END_RESERVE > 0)
 extern uint8_t xPsramDataBase[];
 extern uint8_t xPsramBase[];
 extern uint8_t xPsramSize[];
 struct app_info *g_app_info;
+#endif
 
 /*
  **************************************************************************************************
@@ -983,6 +985,7 @@ static void app_main_thread(void *p)
     //test ...
     // rt_thread_mdelay(3000);
 
+#if (APP_PSRAM_END_RESERVE > 0)
     g_app_info = (struct app_info *)((uint32_t)xPsramBase + (uint32_t)xPsramSize - RT_PSRAM_END_RESERVE);
     if (g_app_info->magic == APP_MAGIC_SUM)
     {
@@ -993,6 +996,7 @@ static void app_main_thread(void *p)
         g_app_info->cold_boot = 1;
     }
     g_app_info->magic = APP_MAGIC_SUM;
+#endif
 
     app_main_data = pdata = (struct app_main_data_t *)rt_malloc(sizeof(struct app_main_data_t));
     RT_ASSERT(pdata != RT_NULL);
