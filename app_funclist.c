@@ -188,7 +188,7 @@ static rt_err_t app_start_funclist_design(void *param)
     pd.pdata = pdata->anim_fb[0];
 
     rk_image_copy(&ps, &pd, FUNC_WIN_COLOR_DEPTH >> 3);
-    memcpy(pdata->anim_fb[1], pdata->anim_fb[0], page->fblen);
+    memcpy(pdata->anim_fb[1], pdata->anim_fb[0], pdata->anim_fblen);
 
     page->fb = pdata->anim_fb[0];
     page->vir_w = FUNC_WIN_XRES;
